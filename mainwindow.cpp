@@ -1,0 +1,420 @@
+#include "mainwindow.h"
+#include "./ui_mainwindow.h"
+
+#include <QSettings>
+#include <QDateTime>
+#include <QFileDialog>
+#include <QFile>
+#include <QTextStream>
+#include <QStringList>
+#include <QSortFilterProxyModel>
+#include <QMessageBox>
+#include <QTimer>
+#include <chrono>
+#include <QByteArrayView>
+#include <QEvent.h>
+
+#include<QJsonArray>
+#include<QJsonDocument>
+#include<QJsonObject>
+
+
+static constexpr std::chrono::seconds kWriteTimeout = std::chrono::seconds{5};
+
+MainWindow::MainWindow(QWidget *parent)
+    : QMainWindow(parent)
+    , ui(new Ui::MainWindow),ui_info(new FormInfo(this)),
+    ui_online(new FormOnline(this)),
+    ui_com_settings(new SettingsDialog(this)),
+    modelPerson (new TpersonModel()),
+    modelCourse (new TcourseModel()),
+    modelOrganization (new TorganizationModel()),
+    modelGroup(new TgroupModel()),
+    modelResult (new TresultModel()),
+
+    comport_timer(new QTimer(this)),
+    comport(new QSerialPort(this)),
+    postSender(new PostRequestSender(this))
+
+{
+    ui->setupUi(this);
+    ui_info->hide();
+    ui_online->hide();
+
+    initActionsConnections();
+
+    QObject::connect(this, &MainWindow::sendDataToDialog, ui_info, &FormInfo::recieveDataFromMain);
+
+    connect(comport, &QSerialPort::errorOccurred, this, &MainWindow::handleError);
+    connect(comport_timer, &QTimer::timeout, this, &MainWindow::handleWriteTimeout);
+    comport_timer->setSingleShot(true);
+
+    connect(comport, &QSerialPort::readyRead, this, &MainWindow::readData);
+    connect(comport, &QSerialPort::bytesWritten, this, &MainWindow::handleBytesWritten);
+}
+
+MainWindow::~MainWindow()
+{
+    delete ui;
+    delete ui_info;
+    //delete csvModel;
+    //delete modelPerson;
+    delete comport_timer;
+    if (comport != nullptr) delete comport;
+    //delete postSender;
+
+    if (modelPerson != nullptr) delete modelPerson;
+    if (modelCourse != nullptr) delete modelCourse;
+    if (modelOrganization != nullptr) delete modelOrganization;
+    if (modelGroup != nullptr) delete modelGroup;
+    if (modelResult != nullptr) delete modelResult;
+}
+
+void MainWindow::initActionsConnections()
+{
+    connect(ui->act_connect_comport, &QAction::triggered, this, &MainWindow::openSerialPort);
+    connect(ui->act_disconnect_comport, &QAction::triggered, this, &MainWindow::closeSerialPort);
+    //connect(ui->actionQuit, &QAction::triggered, this, &MainWindow::close);
+    //connect(ui->actionConfigure, &QAction::triggered, m_settings, &SettingsDialog::show);
+    //connect(ui->actionClear, &QAction::triggered, m_console, &Console::clear);
+    //connect(ui->actionAbout, &QAction::triggered, this, &MainWindow::about);
+    //connect(ui->actionAboutQt, &QAction::triggered, qApp, &QApplication::aboutQt);
+}
+
+bool MainWindow::ReinitSerialPort(){
+        // Read and set settings
+    settingsComport = ui_com_settings->settings();
+    comport->setPortName(settingsComport.name);
+    comport->setBaudRate(settingsComport.baudRate);
+    comport->setDataBits(settingsComport.dataBits);
+    comport->setParity(settingsComport.parity);
+    comport->setStopBits(settingsComport.stopBits);
+    comport->setFlowControl(settingsComport.flowControl);
+        // Connect
+    return comport->open(QIODevice::ReadWrite);
+}
+
+void MainWindow::openSerialPort()
+{
+    if (!fl_connectedComport){
+        // Connect
+        if (ReinitSerialPort()) {
+            fl_connectedComport = true;
+            ui->act_connect_comport->setIcon(QIcon(":/rec/img/connect.png"));
+            ui->act_comport_dialogset->setEnabled(false);
+            showStatusMessage(tr("Connected to %1 : %2, %3")
+                                  .arg(settingsComport.name, settingsComport.stringBaudRate, settingsComport.stringFlowControl));
+        } else {
+            QMessageBox::critical(this, tr("Error"), comport->errorString());
+            showStatusMessage(tr("Open error"));
+        }
+    }
+    else {
+        // Disconnect
+        fl_connectedComport = false;
+        if (comport->isOpen()) comport->close();
+        ui->act_connect_comport->setIcon(QIcon(":/rec/img/disconnect.png"));
+        ui->act_comport_dialogset->setEnabled(true);
+        showStatusMessage(tr("Disconnected"));
+    }
+}
+
+void MainWindow::closeSerialPort()
+{
+    if (comport->isOpen()) comport->close();
+    //m_console->setEnabled(false);
+    ui->act_connect_comport->setEnabled(true);
+    ui->act_disconnect_comport->setEnabled(false);
+    ui->act_connect_comport->setIcon(QIcon(":/rec/img/connect.png"));
+    ui->act_disconnect_comport->setIcon(QIcon(":/rec/img/disconnect.png"));
+    ui->act_comport_dialogset->setEnabled(true);
+    showStatusMessage(tr("Disconnected"));
+}
+
+void MainWindow::writeData(const QByteArray &data)
+{
+    const qint64 written = comport->write(data);
+    if (written == data.size()) {
+        m_bytesToWrite += written;
+        comport_timer->start(kWriteTimeout);
+    } else {
+        const QString error = tr("Failed to write all data to port %1.\n"
+                                 "Error: %2").arg(comport->portName(),
+                                       comport->errorString());
+        showWriteError(error);
+    }
+}
+
+void MainWindow::readData()
+{
+    dataFromComport.append(comport->readAll());
+    QByteArray subString("\r\n");
+    qsizetype index = dataFromComport.indexOf(subString);
+    if (index > -1) {
+        QByteArray ba("");
+        ba = dataFromComport.mid(0, index);
+        qDebug() << ba;
+        ui_log_msg(ba);
+
+        dataFromComport.remove(0,index+2);
+    }
+    //m_console->putData(data);
+}
+
+void MainWindow::handleError(QSerialPort::SerialPortError error)
+{
+    if (error == QSerialPort::ResourceError) {
+        QMessageBox::critical(this, tr("Critical Error"), comport->errorString());
+        closeSerialPort();
+    }
+}
+
+void MainWindow::handleBytesWritten(qint64 bytes)
+{
+    m_bytesToWrite -= bytes;
+    if (m_bytesToWrite == 0)
+      comport_timer->stop();
+}
+
+
+void MainWindow::handleWriteTimeout()
+{
+    const QString error = tr("Write operation timed out for port %1.\n"
+                             "Error: %2").arg(comport->portName(),
+                                   comport->errorString());
+    showWriteError(error);
+}
+
+void MainWindow::showStatusMessage(const QString &message)
+{
+    ui->statusbar->showMessage(message);
+    ui_log_msg(message);
+}
+
+void MainWindow::showWriteError(const QString &message)
+{
+    QMessageBox::warning(this, tr("Warning"), message);
+}
+
+void MainWindow::saveSettings()
+{
+    QSettings settings("set.ini", QSettings::IniFormat);
+    settings.beginGroup("gui");
+    settings.setValue("geometry", saveGeometry());
+    settings.setValue("pos",pos());
+    settings.endGroup();
+}
+
+void MainWindow::loadSettings()
+{
+    QSettings settings("set.ini", QSettings::IniFormat);
+    settings.beginGroup("gui");
+    const auto geometry = settings.value("geometry", QByteArray()).toByteArray();
+    if (geometry.isEmpty())
+        setGeometry(200, 200, 400, 400);
+    else
+        restoreGeometry(geometry);
+
+    /*const auto position = settings.value("pos", QByteArray()).toByteArray();
+    if (!position.isEmpty())
+        //setGeometry(200, 200, 400, 400);
+    //else
+        restorePosition/ (position);*/
+    settings.endGroup();
+}
+
+void MainWindow::closeEvent(QCloseEvent *e)
+{
+    saveSettings();
+    QMainWindow::closeEvent(e);
+}
+
+void MainWindow::keyPressEvent(QKeyEvent *e)
+{
+    if ((e->key() == Qt::Key_K)&&(e->modifiers() & Qt::ControlModifier)){
+        ui_log_msg("Ctrl+K");
+        QWidget* focusedWidget =qApp->focusWidget();
+        if (focusedWidget != nullptr){
+            ui_log_msg(focusedWidget->objectName());
+            if (focusedWidget->objectName() == "tableResult"){
+                if (QTableView *table = dynamic_cast<QTableView*>(focusedWidget)) {
+                    QModelIndex index = table->currentIndex();
+                    int row = index.row();
+                    QVariant value = index.model()->data(index.model()->index(row,4), Qt::DisplayRole);
+                    if (value.canConvert<QString>()) {
+                        QString data = value.value<QString>();
+                        //qDebug() << data;
+                        requestOnline(data);
+                    }
+                }
+            }
+        }
+    }
+}
+
+void MainWindow::ui_log_msg(const QString& str){
+    ui->msg_log->append(QDateTime::currentDateTime().toString("yyyy.MM.dd HH:mm:ss.zzz") + " -> " + str);
+}
+
+
+void MainWindow::on_act_quit_triggered()
+{
+    QApplication::quit();
+}
+
+
+void MainWindow::on_act_open_triggered()
+{
+    ui_log_msg("on_act_open_triggered");
+    QString file_name = QFileDialog::getOpenFileName(this, "Открыть событие", QDir::currentPath(), "*.json");
+    if (file_name == "") return;
+    ui_log_msg(file_name);
+
+    open_JSON(file_name);
+}
+
+
+void MainWindow::on_act_Sportorg_JSON_triggered(){
+    ui_log_msg("on_act_Sportorg_JSON_triggered");
+    QString file_name = QFileDialog::getOpenFileName(this, "Импорт из Sportorg", QDir::currentPath(), "*.json");
+
+    if (file_name != "") open_JSON(file_name);
+}
+
+void MainWindow::open_JSON(const QString &path){
+    ui_log_msg("begin parse");
+    if (path == "") return;
+    SEvent.importSportorgJSON(path);
+    update_ui_table();
+}
+
+void MainWindow::update_ui_table(){
+    ui_log_msg("update_ui_table");
+
+    //TpersonModel *modelPerson = new TpersonModel();
+    modelPerson->reInit(SEvent);
+    ui->tablePerson->setSortingEnabled(true);
+    ui->tablePerson->setModel(modelPerson);
+    ui->tablePerson->resizeColumnsToContents();
+    ui->tablePerson->verticalHeader()->setDefaultSectionSize(20);
+    //ui->tablePerson->resizeRowsToContents();
+
+    //TcourseModel *modelCourse = new TcourseModel();
+    modelCourse->reInit(SEvent);
+    ui->tableDist->setModel(modelCourse);
+    ui->tableDist->resizeColumnsToContents();
+    ui->tableDist->verticalHeader()->setDefaultSectionSize(20);
+
+    //TorganizationModel *modelOrganization = new TorganizationModel();
+    modelOrganization->reInit(SEvent);
+    ui->tableOrg->setModel(modelOrganization);
+    ui->tableOrg->resizeColumnsToContents();
+    ui->tableOrg->verticalHeader()->setDefaultSectionSize(20);
+
+    //TgroupModel *modelGroup = new TgroupModel();
+    modelGroup->reInit(SEvent);
+    ui->tableGroup->setModel(modelGroup);
+    ui->tableGroup->resizeColumnsToContents();
+    ui->tableGroup->verticalHeader()->setDefaultSectionSize(20);
+
+    QSortFilterProxyModel* proxyModelResult = new QSortFilterProxyModel(this);
+
+    //TresultModel *modelResult = new TresultModel();
+    modelResult->reInit(SEvent);
+    proxyModelResult->setSourceModel(modelResult);
+
+    ui->tableResult->setModel(nullptr);
+    ui->tableResult->setModel(proxyModelResult);
+    ui->tableResult->verticalHeader()->setMinimumWidth(25);
+    ui->tableResult->verticalHeader()->setDefaultAlignment(Qt::AlignCenter);
+    ui->tableResult->setSortingEnabled(true);
+    ui->tableResult->sortByColumn(0,Qt::AscendingOrder);
+    ui->tableResult->resizeColumnsToContents();
+    ui->tableResult->verticalHeader()->setDefaultSectionSize(20);
+}
+
+
+void MainWindow::on_act_info_triggered()
+{
+    if (!SEvent.empty()) emit sendDataToDialog(SEvent.getDataRace());
+    ui_info->show();
+}
+
+
+void MainWindow::on_act_import_csv_orgeo_ru_triggered()
+{
+    QString file_name = QFileDialog::getOpenFileName(this, "Импорт заявки", QDir::currentPath(), "*.csv");
+    if (file_name == "") return;
+
+    ui_log_msg(file_name);
+
+    QFile file(file_name);
+    if ( !file.open(QFile::ReadOnly | QFile::Text) ) {
+        qDebug() << "File not exists";
+    } else {
+        // Создаём поток для извлечения данных из файла
+        QTextStream in(&file);
+        in.setEncoding(QStringConverter::LastEncoding);
+        // Считываем данные до конца файла
+        while (!in.atEnd())
+        {
+            // ... построчно
+            QString line = in.readLine();
+            // Добавляем в модель по строке с элементами
+            QList<QStandardItem *> standardItemsList;
+            // учитываем, что строка разделяется точкой с запятой на колонки
+            for (QString item : line.split(';')) {
+                standardItemsList.append(new QStandardItem(item));
+            }
+            csvModel->insertRow(csvModel->rowCount(), standardItemsList);
+        }
+        file.close();
+    }
+}
+
+
+void MainWindow::on_act_show_persons_triggered(){
+    ui->tabWidget->setCurrentIndex(0);}
+void MainWindow::on_act_show_results_triggered(){
+    ui->tabWidget->setCurrentIndex(1);}
+void MainWindow::on_act_show_groups_triggered(){
+    ui->tabWidget->setCurrentIndex(2);}
+void MainWindow::on_act_show_dists_triggered(){
+    ui->tabWidget->setCurrentIndex(3);}
+void MainWindow::on_act_show_orgs_triggered(){
+    ui->tabWidget->setCurrentIndex(4);}
+
+void MainWindow::on_act_comport_dialogset_triggered(){
+    ui_com_settings->show();
+}
+
+void MainWindow::requestOnline(const QString &number)
+{
+    ui_log_msg("requestOnline");
+    ui_log_msg(number);
+    QJsonObject requestResultBody = SEvent.getResultToOnline(number);
+    QJsonArray persons;
+    QJsonObject bodyrequest;
+    persons.append(requestResultBody);
+    bodyrequest["persons"] = persons;
+    settingsOnline = ui_online->settings();
+    emit postSender->sendRequest(this->settingsOnline.url,bodyrequest);
+}
+
+
+void MainWindow::on_act_online_triggered()
+{
+    ui_online->show();
+}
+
+
+void MainWindow::on_act_save_as_triggered()
+{
+    QString file_name = QFileDialog::getSaveFileName(this, "Создать файл T-Event", QDir::currentPath(), "*.json");
+    if (file_name == "") return;
+
+    ui_log_msg("Save as file");
+    ui_log_msg(file_name);
+    SEvent.exportSportorgJSON(file_name);
+}
+

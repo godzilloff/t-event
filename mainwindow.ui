@@ -1,0 +1,408 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1017</width>
+    <height>795</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>T-Event</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QGridLayout" name="gridLayout_2">
+    <item row="0" column="0">
+     <widget class="QTabWidget" name="tabWidget">
+      <property name="currentIndex">
+       <number>1</number>
+      </property>
+      <property name="iconSize">
+       <size>
+        <width>10</width>
+        <height>10</height>
+       </size>
+      </property>
+      <widget class="QWidget" name="tab1Person">
+       <attribute name="title">
+        <string>Участники</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout_2">
+        <item>
+         <widget class="QTableView" name="tablePerson"/>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="tab2Result">
+       <attribute name="title">
+        <string>Результаты</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_4">
+        <item row="0" column="0">
+         <widget class="QTableView" name="tableResult">
+          <property name="selectionBehavior">
+           <enum>QAbstractItemView::SelectRows</enum>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="tab3Group">
+       <attribute name="title">
+        <string>Группы</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout_3">
+        <item>
+         <widget class="QTableView" name="tableGroup"/>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="tab4Dist">
+       <attribute name="title">
+        <string>Дистанции</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout_4">
+        <item>
+         <widget class="QTableView" name="tableDist"/>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="tab5Org">
+       <attribute name="title">
+        <string>Коллективы</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout">
+        <item>
+         <widget class="QTableView" name="tableOrg"/>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="tab6log">
+       <attribute name="title">
+        <string>Лог</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout">
+        <item row="0" column="0">
+         <widget class="QTextEdit" name="msg_log">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1017</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menu">
+    <property name="title">
+     <string>Файл</string>
+    </property>
+    <widget class="QMenu" name="menu_2">
+     <property name="title">
+      <string>Импорт</string>
+     </property>
+     <addaction name="act_import_csv_orgeo_ru"/>
+     <addaction name="act_Sportorg_JSON"/>
+    </widget>
+    <addaction name="act_new"/>
+    <addaction name="act_save"/>
+    <addaction name="act_open"/>
+    <addaction name="act_save_as"/>
+    <addaction name="act_info"/>
+    <addaction name="separator"/>
+    <addaction name="menu_2"/>
+    <addaction name="separator"/>
+    <addaction name="act_quit"/>
+   </widget>
+   <widget class="QMenu" name="menu_3">
+    <property name="title">
+     <string>Редактировать</string>
+    </property>
+    <addaction name="act_insert"/>
+    <addaction name="act_delete"/>
+    <addaction name="act_copy"/>
+    <addaction name="act_duplicate"/>
+   </widget>
+   <widget class="QMenu" name="menu_4">
+    <property name="title">
+     <string>Вид</string>
+    </property>
+    <addaction name="act_refresh"/>
+    <addaction name="act_filtr"/>
+    <addaction name="act_find"/>
+    <addaction name="separator"/>
+    <addaction name="act_show_persons"/>
+    <addaction name="act_show_results"/>
+    <addaction name="act_show_groups"/>
+    <addaction name="act_show_dists"/>
+    <addaction name="act_show_orgs"/>
+   </widget>
+   <widget class="QMenu" name="menu_5">
+    <property name="title">
+     <string>Подготовка к старту</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="menu_6">
+    <property name="title">
+     <string>Результаты</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="menu_7">
+    <property name="title">
+     <string>Сервис</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="menu_8">
+    <property name="title">
+     <string>Опции</string>
+    </property>
+    <addaction name="act_comport_dialogset"/>
+    <addaction name="act_connect_comport"/>
+    <addaction name="act_disconnect_comport"/>
+    <addaction name="separator"/>
+    <addaction name="act_online"/>
+   </widget>
+   <widget class="QMenu" name="menu_9">
+    <property name="title">
+     <string>Помощь</string>
+    </property>
+   </widget>
+   <addaction name="menu"/>
+   <addaction name="menu_3"/>
+   <addaction name="menu_4"/>
+   <addaction name="menu_5"/>
+   <addaction name="menu_6"/>
+   <addaction name="menu_7"/>
+   <addaction name="menu_8"/>
+   <addaction name="menu_9"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QToolBar" name="toolBar">
+   <property name="windowTitle">
+    <string>toolBar</string>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+   <addaction name="act_new"/>
+   <addaction name="act_save"/>
+   <addaction name="act_open"/>
+   <addaction name="act_info"/>
+   <addaction name="act_connect_comport"/>
+  </widget>
+  <action name="act_new">
+   <property name="icon">
+    <iconset resource="resource.qrc">
+     <normaloff>:/rec/img/new.svg</normaloff>:/rec/img/new.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Новое мероприятие</string>
+   </property>
+   <property name="toolTip">
+    <string>Создать</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
+   </property>
+  </action>
+  <action name="act_save">
+   <property name="icon">
+    <iconset resource="resource.qrc">
+     <normaloff>:/rec/img/save.svg</normaloff>:/rec/img/save.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Сохранить</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
+  </action>
+  <action name="act_open">
+   <property name="icon">
+    <iconset resource="resource.qrc">
+     <normaloff>:/rec/img/open.svg</normaloff>:/rec/img/open.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Открыть</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="act_save_as">
+   <property name="text">
+    <string>Сохранить как...</string>
+   </property>
+  </action>
+  <action name="act_info">
+   <property name="icon">
+    <iconset resource="resource.qrc">
+     <normaloff>:/rec/img/info.svg</normaloff>:/rec/img/info.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Параметры мероприятия</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+I</string>
+   </property>
+  </action>
+  <action name="act_import_csv_orgeo_ru">
+   <property name="text">
+    <string>Заяка CSV (Orgeo.ru)</string>
+   </property>
+  </action>
+  <action name="act_quit">
+   <property name="icon">
+    <iconset resource="resource.qrc">
+     <normaloff>:/rec/img/quit.svg</normaloff>:/rec/img/quit.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Выход</string>
+   </property>
+  </action>
+  <action name="act_Sportorg_JSON">
+   <property name="text">
+    <string>Мероприятие Sportorg (JSON)</string>
+   </property>
+  </action>
+  <action name="act_refresh">
+   <property name="text">
+    <string>Обновить</string>
+   </property>
+   <property name="shortcut">
+    <string>F5</string>
+   </property>
+  </action>
+  <action name="act_filtr">
+   <property name="text">
+    <string>Фильтрация</string>
+   </property>
+   <property name="shortcut">
+    <string>F2</string>
+   </property>
+  </action>
+  <action name="act_find">
+   <property name="text">
+    <string>Поиск</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+F</string>
+   </property>
+  </action>
+  <action name="act_show_persons">
+   <property name="text">
+    <string>Участники</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+1</string>
+   </property>
+  </action>
+  <action name="act_show_results">
+   <property name="text">
+    <string>Результаты</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+2</string>
+   </property>
+  </action>
+  <action name="act_show_groups">
+   <property name="text">
+    <string>Группы</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+3</string>
+   </property>
+  </action>
+  <action name="act_show_dists">
+   <property name="text">
+    <string>Дистанции</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+4</string>
+   </property>
+  </action>
+  <action name="act_show_orgs">
+   <property name="text">
+    <string>Команды</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+5</string>
+   </property>
+  </action>
+  <action name="act_insert">
+   <property name="text">
+    <string>Добавить запись</string>
+   </property>
+  </action>
+  <action name="act_delete">
+   <property name="text">
+    <string>Удалить</string>
+   </property>
+  </action>
+  <action name="act_copy">
+   <property name="text">
+    <string>Копировать</string>
+   </property>
+  </action>
+  <action name="act_duplicate">
+   <property name="text">
+    <string>Дублировать</string>
+   </property>
+  </action>
+  <action name="act_comport_dialogset">
+   <property name="text">
+    <string>Настройки COM-порта</string>
+   </property>
+  </action>
+  <action name="act_connect_comport">
+   <property name="icon">
+    <iconset resource="resource.qrc">
+     <normaloff>:/rec/img/disconnect.png</normaloff>:/rec/img/disconnect.png</iconset>
+   </property>
+   <property name="text">
+    <string>Подключить ридер</string>
+   </property>
+  </action>
+  <action name="act_disconnect_comport">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="resource.qrc">
+     <normaloff>:/rec/img/connect.png</normaloff>:/rec/img/connect.png</iconset>
+   </property>
+   <property name="text">
+    <string>Отключить ридер</string>
+   </property>
+  </action>
+  <action name="act_online">
+   <property name="text">
+    <string>Online</string>
+   </property>
+  </action>
+ </widget>
+ <resources>
+  <include location="resource.qrc"/>
+ </resources>
+ <connections/>
+</ui>
