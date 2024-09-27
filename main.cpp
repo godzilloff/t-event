@@ -2,6 +2,7 @@
 
 #include <QApplication>
 #include <QFile>
+#include <QDir>
 
 int main(int argc, char *argv[])
 {
@@ -10,7 +11,7 @@ int main(int argc, char *argv[])
 
     QFile styleF;
 
-    styleF.setFileName("C:\\work\\qt\\t-event\\T-Event\\Combinear.qss");
+    styleF.setFileName(QDir::currentPath()+ "\\style\\Combinear.qss");
     styleF.open(QFile::ReadOnly);
     QString qssStr = styleF.readAll();
 
