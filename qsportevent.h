@@ -2,12 +2,7 @@
 #define QSPORTEVENT_H
 
 #include <QObject>
-
 #include <QVector>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QJsonParseError>
-#include <QFile>
 
 #include "race.h"
 
@@ -36,26 +31,6 @@ private:
     QVector<race*> races_;
     QJsonObject toJson() const;
 
-    QJsonDocument doc;
-    QJsonArray jsonArr;
-    QJsonParseError docError;
-
-
-    // QJsonArray jsonArrCourses;
-    // QJsonArray jsonArrGroup;
-    // QJsonArray jsonArrOrganization;
-    // QJsonArray jsonArrPerson;
-    // QJsonArray jsonArrResult;
-
-    //-- дистанции / courses []
-    //-- данные / "data": {}
-    //-- группы / groups []
-    //-- организации / "organizations": []
-    //-- участники / "persons": []
-    //-- настройки / "settings": {}
-    //-- результаты / "results": []
-
-    QFile file_input;
 };
 
 #endif // QSPORTEVENT_H

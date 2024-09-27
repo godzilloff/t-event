@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
 
     QFile styleF;
 
-    styleF.setFileName(QDir::currentPath()+ "\\style\\Combinear.qss");
+    styleF.setFileName(QDir::currentPath() + "\\style\\Combinear.qss");
     styleF.open(QFile::ReadOnly);
     QString qssStr = styleF.readAll();
 

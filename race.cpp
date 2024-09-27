@@ -4,6 +4,12 @@ race::race(){}
 
 race::race(QJsonObject objJson)
 {
+    QJsonArray jsonArrCourses;
+    QJsonArray jsonArrGroup;
+    QJsonArray jsonArrOrganization;
+    QJsonArray jsonArrPerson;
+    QJsonArray jsonArrResult;
+
     updateData(objJson.value("data").toObject());
 
     jsonArrCourses = objJson.value("courses").toArray();

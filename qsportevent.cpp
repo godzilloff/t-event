@@ -2,10 +2,12 @@
 
 #include <QDebug>
 
-//#include <QJsonObject>
-//#include <QJsonArray>
-//#include <QJsonParseError>
-//#include <QFile>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QJsonParseError>
+#include <QFile>
+
+
 #include <QMessageBox>
 
 QSportEvent::QSportEvent(QObject *parent)
@@ -44,10 +46,15 @@ QJsonObject QSportEvent::toJson() const{
 
 void QSportEvent::importSportorgJSON(const QString& path){
     qDebug() << "importSportorgJSON ===="<< path<< Qt::endl ;
+    QFile file_input;
     file_input.setFileName(path);
 
     if ( file_input.open(QIODevice::ReadOnly | QFile::Text) )
     {
+        QJsonDocument doc;
+        QJsonArray jsonArr;
+        QJsonParseError docError;
+
         doc = QJsonDocument::fromJson(QByteArray(file_input.readAll()), &docError);
         file_input.close();
 

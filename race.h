@@ -78,12 +78,6 @@ private:
     QVector<result*> results_;
 
     QJsonObject objJsonData;
-
-    QJsonArray jsonArrCourses;
-    QJsonArray jsonArrGroup;
-    QJsonArray jsonArrOrganization;
-    QJsonArray jsonArrPerson;
-    QJsonArray jsonArrResult;
 };
 
 #endif // RACE_H
