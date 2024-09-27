@@ -25,7 +25,7 @@ public slots:
     void sendRequest(const QUrl &url, const QJsonObject &jsonData);
 
 private:
-    QNetworkAccessManager *manager;
+    QNetworkAccessManager manager;
 
 };
 

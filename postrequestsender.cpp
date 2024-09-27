@@ -1,19 +1,17 @@
 #include "postrequestsender.h"
 
 PostRequestSender::PostRequestSender(QObject *parent)
-    : QObject{parent}, manager(new QNetworkAccessManager(this))
+    : QObject{parent}
 {}
 
 PostRequestSender::~PostRequestSender()
-{
-    delete manager;
-}
+{}
 
 void PostRequestSender::sendRequest(const QUrl &url, const QJsonObject &jsonData) {
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     QByteArray data = QJsonDocument(jsonData).toJson();
-    manager->post(request, data);
+    manager.post(request, data);
 }
 
 void PostRequestSender::handleResponse(QNetworkReply *reply) {
