@@ -42,7 +42,6 @@ QVariant TpersonModel::data(const QModelIndex &index, int role) const
             case 5: res = QString::number(persons_->at(index.row())->getYear()); break;
             case 6: res = QString::number(persons_->at(index.row())->getBib()); break;
             case 7: res = QString::number(persons_->at(index.row())->getCardNumber()); break;
-            //case 8: res = QString::number(persons_->at(index.row())->getStartTime()); break;
             case 8: res = QTime::fromMSecsSinceStartOfDay(persons_->at(index.row())->getStartTime()).toString("hh:mm:ss"); break;
             //case 9:
             case 10: res = persons_->at(index.row())->getComment(); break;

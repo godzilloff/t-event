@@ -23,7 +23,9 @@ static constexpr std::chrono::seconds kWriteTimeout = std::chrono::seconds{5};
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
-    , ui(new Ui::MainWindow),ui_info(new FormInfo(this)),
+    , ui(new Ui::MainWindow),
+    ui_info(new FormInfo(this)),
+    ui_person(new FormPerson(this)),
     ui_online(new FormOnline(this)),
     ui_com_settings(new SettingsDialog(this)),
     modelPerson (new TpersonModel()),
@@ -39,7 +41,10 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     ui_info->hide();
+    ui_person->hide();
     ui_online->hide();
+
+    ui_person->update_sevent(&SEvent);
 
     initActionsConnections();
 
@@ -57,8 +62,7 @@ MainWindow::~MainWindow()
 {
     delete ui;
     delete ui_info;
-    //delete csvModel;
-    //delete modelPerson;
+    delete ui_person;
     delete comport_timer;
     if (comport != nullptr) delete comport;
     //delete postSender;
@@ -416,5 +420,18 @@ void MainWindow::on_act_save_as_triggered()
     ui_log_msg("Save as file");
     ui_log_msg(file_name);
     SEvent.exportSportorgJSON(file_name);
+}
+
+void MainWindow::on_tablePerson_doubleClicked(const QModelIndex &index){
+    ui_log_msg("on_doubleclick_person");
+    int row = index.row();
+
+    QString bib = modelPerson->data(modelPerson->index(row, 6),Qt::DisplayRole).toString();
+    const st_person* data_ = SEvent.getDataPersonBib(bib.toInt());
+    if (data_ != nullptr){
+        emit sendDataPersonToDialog(data_);
+        ui_person->show();
+    }
+
 }
 

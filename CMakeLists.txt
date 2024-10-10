@@ -48,6 +48,8 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         settingsdialog.cpp settingsdialog.h settingsdialog.ui
         postrequestsender.h postrequestsender.cpp
         formonline.h formonline.cpp formonline.ui
+
+        formperson.h formperson.cpp formperson.ui
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET T-Event APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
