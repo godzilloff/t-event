@@ -40,6 +40,7 @@ public:
 
     void open_JSON(const QString &path);
     void update_ui_table();
+    void update_ui_result();
 
 signals:
     void sendDataToDialog(const st_race& data_);
@@ -105,14 +106,15 @@ private:
     SettingsDialog::Settings settingsComport;
 
     QStandardItemModel *csvModel;        // указатель на модель данных из CSV файла
-    //QStandardItemModel *jsonModelEvent;  // указатель на модель данных из JSON файла
 
-    //TpersonModel *modelPerson;
     TpersonModel *modelPerson = nullptr;
     TcourseModel *modelCourse = nullptr;
     TorganizationModel *modelOrganization = nullptr;
     TgroupModel *modelGroup = nullptr;
     TresultModel *modelResult = nullptr;
+
+    TResultProxyModel* proxyModelResult = nullptr;
+
 
     void ui_log_msg(const QString& str);
 

@@ -35,6 +35,7 @@ MainWindow::MainWindow(QWidget *parent)
     modelOrganization (new TorganizationModel()),
     modelGroup(new TgroupModel()),
     modelResult (new TresultModel()),
+    proxyModelResult (new TResultProxyModel(this)),
 
     comport_timer(new QTimer(this)),
     comport(new QSerialPort(this)),
@@ -72,14 +73,15 @@ MainWindow::~MainWindow()
     delete ui_info;
     delete ui_person;
     delete comport_timer;
-    if (comport != nullptr) delete comport;
-    //delete postSender;
+    delete comport;
 
-    if (modelPerson != nullptr) delete modelPerson;
-    if (modelCourse != nullptr) delete modelCourse;
-    if (modelOrganization != nullptr) delete modelOrganization;
-    if (modelGroup != nullptr) delete modelGroup;
-    if (modelResult != nullptr) delete modelResult;
+    delete modelPerson;
+    delete modelCourse;
+    delete modelOrganization;
+    delete modelGroup;
+    delete modelResult;
+
+    delete proxyModelResult;
 }
 
 void MainWindow::initActionsConnections()
@@ -301,9 +303,10 @@ void MainWindow::closeEvent(QCloseEvent *e)
 
 void MainWindow::keyPressEvent(QKeyEvent *e)
 {
+    QWidget* focusedWidget =qApp->focusWidget();
+
     if ((e->key() == Qt::Key_K)&&(e->modifiers() & Qt::ControlModifier)){
         ui_log_msg("Ctrl+K");
-        QWidget* focusedWidget =qApp->focusWidget();
         if (focusedWidget != nullptr){
             ui_log_msg(focusedWidget->objectName());
             if (focusedWidget->objectName() == "tableResult"){
@@ -317,6 +320,16 @@ void MainWindow::keyPressEvent(QKeyEvent *e)
                         requestOnline(data);
                     }
                 }
+            }
+        }
+    }
+    if ((e->key() == Qt::Key_Insert)){//&&(e->modifiers() & Qt::ControlModifier)){
+        ui_log_msg("insert");
+
+        if (focusedWidget != nullptr){
+            ui_log_msg(focusedWidget->objectName());
+            if (focusedWidget->objectName() == "tablePerson"){
+                ui_person->show();
             }
         }
     }
@@ -387,14 +400,21 @@ void MainWindow::update_ui_table(){
     ui->tableGroup->resizeColumnsToContents();
     ui->tableGroup->verticalHeader()->setDefaultSectionSize(20);
 
-    QSortFilterProxyModel* proxyModelResult = new QSortFilterProxyModel(this);
 
+    update_ui_result();
+}
+
+void MainWindow::update_ui_result(){
     //TresultModel *modelResult = new TresultModel();
+    //QSortFilterProxyModel* proxyModelResult = new QSortFilterProxyModel(this);
+
     modelResult->reInit(SEvent);
+    proxyModelResult->setSourceModel(nullptr);
     proxyModelResult->setSourceModel(modelResult);
 
-    ui->tableResult->setModel(nullptr);
+    //ui->tableResult->setModel(nullptr);
     ui->tableResult->setModel(proxyModelResult);
+    //ui->tableResult->setModel(modelResult);
     ui->tableResult->verticalHeader()->setMinimumWidth(25);
     ui->tableResult->verticalHeader()->setDefaultAlignment(Qt::AlignCenter);
     ui->tableResult->setSortingEnabled(true);

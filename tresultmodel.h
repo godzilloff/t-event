@@ -2,6 +2,7 @@
 #define TRESULTMODEL_H
 
 #include <QAbstractItemModel>
+#include <QSortFilterProxyModel>
 #include <QObject>
 
 #include "result.h"
@@ -30,6 +31,25 @@ private:
     race* thisRace = nullptr;
 
 signals:
+};
+
+// ==============
+
+class TResultProxyModel : public QSortFilterProxyModel
+{
+    Q_OBJECT
+
+public:
+    TResultProxyModel(QObject *parent = nullptr){};
+
+    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+
+protected:
+    //bool filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const override;
+    //bool lessThan(const QModelIndex &left, const QModelIndex &right) const override;
+
+private:
+
 };
 
 #endif // TRESULTMODEL_H

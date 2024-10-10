@@ -80,3 +80,10 @@ QVariant TresultModel::headerData(int section, Qt::Orientation orientation, int 
     }
     return section + 1;
 }
+
+// ==============
+
+QVariant TResultProxyModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+    return sourceModel()->headerData(section, orientation, role);
+}
