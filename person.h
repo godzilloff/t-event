@@ -137,6 +137,8 @@ public:
 
     bool operator==(const person & obj){return this->data.bib == obj.data.bib; };
 
+    int setCardNum(int cardNum);
+
     int getBib(){ return data.bib;};
     QString getName(){ return data.name;};
     QString getSurname(){ return data.surname;};
@@ -149,6 +151,8 @@ public:
     QString getComment(){ return data.comment;};
     QString getOrganizationId(){ return data.organization_id;};
     QString getGroupId(){ return data.group_id;};
+
+    const st_person* getDataPersonBib(){ return &data;};
 
 
 private:

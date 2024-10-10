@@ -68,6 +68,12 @@ QJsonObject person::toJson() const
     return json;
 }
 
+int person::setCardNum(int cardNum)
+{
+    data.card_number = cardNum;
+    return cardNum;
+}
+
 
 QString getQ(int q){
     QString res = "";

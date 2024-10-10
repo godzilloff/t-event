@@ -19,8 +19,20 @@ public:
     const QString getNameOrganization(const QString& id);
     const QString getNameGroup(const QString& id);
 
+    const QStringList getNamesOrganization();
+    const QStringList getNamesGroup();
+
+    const bool checkingCardNumInPerson(int bib, int cardNum);
+    const bool checkingCardNumInResult(int cardNum);
+    const int getBibFromCardNum(int cardNum);
+    int getCardNumFromBib(int bib);
+    int setCardNumFromBib(int bib, int cardNum);
+    int addResult(int bib, QByteArray ba);
+
     QVector<race*> getRaces(){return races_;};
     const st_race& getDataRace(){return races_.at(0)->getDataRace();};
+    const st_person* getDataPersonBib(int bib){return races_.at(0)->getDataPersonBib(bib);};
+
     const QJsonObject getResultToOnline(const QString& number);
     bool empty(){ return races_.size() == 0;};
 

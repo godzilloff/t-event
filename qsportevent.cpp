@@ -30,6 +30,58 @@ const QString QSportEvent::getNameGroup(const QString& id){
     return races_.at(0)->getNameGroup(id);
 }
 
+const QStringList QSportEvent::getNamesOrganization()
+{
+    QVector<organization*> *prtOrg = races_.at(0)->getPtrOrganizations();
+    QStringList names;
+
+    for (auto *org : *prtOrg) {
+        names << org->getName();
+    }
+    return names;
+}
+
+const QStringList QSportEvent::getNamesGroup()
+{
+    QVector<group*> *prtGroup = races_.at(0)->getPtrGroups();
+    QStringList names;
+
+    for (auto *group : *prtGroup) {
+        names << group->getName();
+    }
+    return names;
+}
+
+const bool QSportEvent::checkingCardNumInPerson(int bib, int cardNum)
+{
+    return races_.at(0)->checkingCardNumInPerson(bib, cardNum);
+}
+
+const bool QSportEvent::checkingCardNumInResult(int cardNum)
+{
+    return races_.at(0)->checkingCardNumInResult(cardNum);
+}
+
+const int QSportEvent::getBibFromCardNum(int cardNum)
+{
+    return races_.at(0)->getBibFromCardNum(cardNum);
+}
+
+int QSportEvent::getCardNumFromBib(int bib)
+{
+    return races_.at(0)->getCardNumFromBib(bib);
+}
+
+int QSportEvent::setCardNumFromBib(int bib, int cardNum)
+{
+    return races_.at(0)->setCardNumFromBib(bib, cardNum);
+}
+
+int QSportEvent::addResult(int bib, QByteArray ba)
+{
+    return races_.at(0)->addResult(bib, ba);
+}
+
 QJsonObject QSportEvent::toJson() const{
     QJsonObject json;
     json["version"] = "0.5.0.0";

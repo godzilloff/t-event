@@ -1,6 +1,8 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
 
+#include <QInputDialog>
+
 #include <QSettings>
 #include <QDateTime>
 #include <QFileDialog>
@@ -50,12 +52,18 @@ MainWindow::MainWindow(QWidget *parent)
 
     QObject::connect(this, &MainWindow::sendDataToDialog, ui_info, &FormInfo::recieveDataFromMain);
 
-    connect(comport, &QSerialPort::errorOccurred, this, &MainWindow::handleError);
-    connect(comport_timer, &QTimer::timeout, this, &MainWindow::handleWriteTimeout);
+    QObject::connect(ui->tablePerson, &QTableView::doubleClicked,this, &MainWindow::on_tablePerson_doubleClicked);
+
+    QObject::connect(this, &MainWindow::sendDataPersonToDialog, ui_person, &FormPerson::recieveDataFromMain);
+
+    QObject::connect(modelResult,&QAbstractItemModel::dataChanged,proxyModelResult,&QSortFilterProxyModel::invalidate);
+
+    QObject::connect(comport, &QSerialPort::errorOccurred, this, &MainWindow::handleError);
+    QObject::connect(comport_timer, &QTimer::timeout, this, &MainWindow::handleWriteTimeout);
     comport_timer->setSingleShot(true);
 
-    connect(comport, &QSerialPort::readyRead, this, &MainWindow::readData);
-    connect(comport, &QSerialPort::bytesWritten, this, &MainWindow::handleBytesWritten);
+    QObject::connect(comport, &QSerialPort::readyRead, this, &MainWindow::readData);
+    QObject::connect(comport, &QSerialPort::bytesWritten, this, &MainWindow::handleBytesWritten);
 }
 
 MainWindow::~MainWindow()
@@ -152,15 +160,73 @@ void MainWindow::writeData(const QByteArray &data)
 void MainWindow::readData()
 {
     dataFromComport.append(comport->readAll());
-    QByteArray subString("\r\n");
-    qsizetype index = dataFromComport.indexOf(subString);
-    if (index > -1) {
-        QByteArray ba("");
-        ba = dataFromComport.mid(0, index);
-        qDebug() << ba;
-        ui_log_msg(ba);
+    //QByteArray subString("\r\n");
+    QByteArray subStringStop("#");
+    QByteArray subStringStart("$");
+    qsizetype indexStop = dataFromComport.indexOf(subStringStop);
+    qsizetype indexStart = dataFromComport.indexOf(subStringStart);
 
-        dataFromComport.remove(0,index+2);
+    if (indexStop > -1) {
+        QByteArray ba("");
+        ba = dataFromComport.mid(indexStart+1, 12);
+        //qDebug() << ba;
+        //ui_log_msg(ba);
+
+        st_comport_result* m = reinterpret_cast<st_comport_result*>(ba.data());
+
+        int cardNum = m->cardNum; //ba.mid(0, 4).toInt();
+
+        if (SEvent.checkingCardNumInResult(cardNum)) {
+            QMessageBox::warning(this, "Внимание!", "Этот чип уже был считан ранее");
+        }
+        else {
+            int bib = SEvent.getBibFromCardNum(cardNum);
+            if ( bib == -1) {
+                qDebug() << "person not found";
+
+                bool button = false;
+                bib = QInputDialog::getInt(this, "input","bib",0,0,1000000,1,&button);
+
+                if (button) {
+                    int carrent_cardNum_bib = SEvent.getCardNumFromBib(bib);
+
+                    if (carrent_cardNum_bib < 1)
+                        SEvent.setCardNumFromBib(bib, cardNum);
+                    else {
+                        if ((carrent_cardNum_bib > 0)&&(carrent_cardNum_bib != cardNum)){
+                            QMessageBox msgBox;
+                            msgBox.setText("Заменить номер чипа?");
+                            msgBox.setInformativeText("Ok - заменить\n Отмена - оставить без изменений");
+                            msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
+                            msgBox.setIcon(QMessageBox::Warning);
+                            msgBox.setDefaultButton(QMessageBox::Cancel);
+                            int change_cardnum = msgBox.exec();
+                            if (change_cardnum == QMessageBox::Ok)
+                                SEvent.setCardNumFromBib(bib, cardNum);
+                            else bib = -1;
+                        }
+                    }
+                }
+            }
+
+            if (bib != -1){
+                SEvent.addResult(bib, ba);
+
+                emit modelResult->dataChanged(modelResult->index(0,0),modelResult->index(0,0));
+                //update_ui_table();
+                //update_ui_result();
+
+                emit proxyModelResult->dataChanged(
+                    proxyModelResult->index(0,0),
+                    proxyModelResult->index(
+                        proxyModelResult->rowCount(),
+                        proxyModelResult->columnCount()));
+                //*/
+                emit proxyModelResult->layoutChanged();
+                ui->tableResult->update();
+            }
+        }
+        dataFromComport.remove(0,indexStop+2);
     }
     //m_console->putData(data);
 }

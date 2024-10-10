@@ -7,6 +7,14 @@
 
 //#include "person.h"
 
+#pragma pack(push, 1)
+struct st_comport_result{
+    int32_t cardNum = 0;
+    int32_t startMs = 0;
+    int32_t finishMs = 0;
+};
+#pragma pack(pop)
+
 struct st_result{
     int assigned_rank = 0;
     int bib = 0;

@@ -45,6 +45,55 @@ race::race(QJsonObject objJson)
     }
 }
 
+int race::addResult(int bib, QByteArray ba)
+{
+    st_comport_result* const pstres = reinterpret_cast<st_comport_result *>( ba.data() );
+    qDebug() << pstres->cardNum;
+    qDebug() << pstres->startMs;
+    qDebug() << pstres->finishMs;
+
+    int res_ms = pstres->finishMs - pstres->startMs;
+
+    QTime time =QTime::currentTime();
+
+    QJsonObject json;
+    //json["assigned_rank"] = data.assigned_rank;
+    json["bib"] = bib;
+    //json["can_win_count"] = data.can_win_count;
+    json["card_number"] = pstres->cardNum;
+    json["created_at"] = time.msecsSinceStartOfDay();
+    json["credit_time"] = 0;
+    //json["days"] = data.days;
+    //json["diff"] = data.diff;
+    //json["diff_scores"] = data.diff_scores;
+    json["finish_msec"] = pstres->finishMs;
+    json["finish_time"] = pstres->finishMs;
+    json["id"] = QString::number(bib);
+    //json["order"] = data.order;
+    //json["penalty_laps"] = data.penalty_laps;
+    //json["penalty_time"] = data.penalty_time;
+    json["person_id"] = this->getBibFromCardNum(pstres->cardNum);
+    //json["place"] = data.place;
+    json["result"] = QTime::fromMSecsSinceStartOfDay(res_ms).toString("hh:mm:ss.z");
+    json["result_msec"] = res_ms;
+    json["result_relay"] = QTime::fromMSecsSinceStartOfDay(res_ms).toString("hh:mm:ss.z");
+    json["result_relay_msec"] = res_ms;
+    //json["scores"] = data.scores;
+    //json["scores_rogain"] = data.scores_rogain;
+    //json["speed"] = data.speed;
+    json["start_msec"] = pstres->startMs;
+    json["start_time"] = pstres->startMs;
+    json["status"] = 1;
+    //json["status_comment"] = data.status_comment;
+    //json["system_type"] = data.system_type;
+    json["object"] = "ResultManual";
+
+    // */
+    result* result_ = new result(json);
+    results_.push_back(result_);
+    return 0;
+}
+
 
 // {
 //     "persons": [
@@ -162,6 +211,15 @@ QJsonObject race::toJson() const
     return json;
 }
 
+const st_person* race::getDataPersonBib(int number)
+{
+    for(person* x: persons_){
+        if (x->getBib() == number)
+            return x->getDataPersonBib();
+    }
+    return nullptr;
+}
+
 int race::getIndexPerson(int number)
 {
     for(person* x: persons_){
@@ -196,6 +254,51 @@ QString race::getFullNameFromBib(int number)
             return x->getFullName();
     }
     return "";
+}
+
+const bool race::checkingCardNumInPerson(int bib, int cardNum)
+{
+    for(person* x: persons_){
+        if (x->getBib() == bib)
+            return (x->getCardNumber() == cardNum);
+    }
+    return false;
+}
+
+const bool race::checkingCardNumInResult(int cardNum)
+{
+    for(result* x: results_){
+        if (x->getCardNumber() == cardNum)
+            return true;
+    }
+    return false;
+}
+
+int race::getBibFromCardNum(int cardNum)
+{
+    for(person* x: persons_){
+        if (x->getCardNumber() == cardNum)
+            return x->getBib();
+    }
+    return -1;
+}
+
+int race::getCardNumFromBib(int bib)
+{
+    for(person* x: persons_){
+        if (x->getBib() == bib)
+            return x->getCardNumber();
+    }
+    return -1;
+}
+
+int race::setCardNumFromBib(int bib, int cardNum)
+{
+    for(person* x: persons_){
+        if (x->getBib() == bib)
+            return x->setCardNum(cardNum);
+    }
+    return -1;
 }
 
 QString race::getNameOrganizationFromBib(int number)

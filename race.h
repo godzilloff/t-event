@@ -53,9 +53,18 @@ public:
 
     int getIndexPerson(int number);
 
+    const st_person* getDataPersonBib(int number);
+
     QString getNameFromBib(int number);
     QString getSurnameFromBib(int number);
     QString getFullNameFromBib(int number);
+
+    const bool checkingCardNumInPerson(int bib, int cardNum);
+    const bool checkingCardNumInResult(int cardNum);
+    int getBibFromCardNum(int cardNum);
+    int getCardNumFromBib(int bib);
+    int setCardNumFromBib(int bib, int cardNum);
+    int addResult(int bib, QByteArray ba);
 
     QString getNameOrganizationFromBib(int number);
     QString getNameGroupFromBib(int number);
