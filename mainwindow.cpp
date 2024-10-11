@@ -225,6 +225,7 @@ void MainWindow::readData()
                         proxyModelResult->columnCount()));
                 //*/
                 emit proxyModelResult->layoutChanged();
+                proxyModelResult->sort(TresultModel::ColNumTableResult::CResult);
                 ui->tableResult->update();
             }
         }
@@ -412,15 +413,16 @@ void MainWindow::update_ui_result(){
     proxyModelResult->setSourceModel(nullptr);
     proxyModelResult->setSourceModel(modelResult);
 
-    //ui->tableResult->setModel(nullptr);
     ui->tableResult->setModel(proxyModelResult);
-    //ui->tableResult->setModel(modelResult);
     ui->tableResult->verticalHeader()->setMinimumWidth(25);
     ui->tableResult->verticalHeader()->setDefaultAlignment(Qt::AlignCenter);
     ui->tableResult->setSortingEnabled(true);
     ui->tableResult->sortByColumn(0,Qt::AscendingOrder);
     ui->tableResult->resizeColumnsToContents();
     ui->tableResult->verticalHeader()->setDefaultSectionSize(20);
+    proxyModelResult->sort(TresultModel::ColNumTableResult::CResult);
+
+    ui->tableResult->update();
 }
 
 

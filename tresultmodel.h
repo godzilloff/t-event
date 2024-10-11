@@ -13,6 +13,25 @@ class TresultModel : public QAbstractTableModel
 {
     Q_OBJECT
 public:
+    enum ColNumTableResult {
+        CName = 0,
+        CSurname,
+        CGroup,
+        COrg,
+        CBib,
+        CCardNum,
+        CStart,
+        CFinish,
+        CResult,
+        CStatus,
+        COffset,
+        CPenalty,
+        CPenaltyLaps,
+        CRank,
+        CType,
+        CRent
+    };
+
     explicit TresultModel(QObject *parent = nullptr);
     //explicit TresultModel(QSportEvent &event);
     ~TresultModel();

@@ -33,15 +33,15 @@ QVariant TresultModel::data(const QModelIndex &index, int role) const
         if (results_->count()>index.row()){
             int bib = results_->at(index.row())->getBibResult();
             switch (index.column()) {
-            case 0: res = thisRace->getNameFromBib(bib); break;
-            case 1: res = thisRace->getSurnameFromBib(bib); break;
-            case 2: res = thisRace->getNameGroupFromBib(bib); break;
-            case 3: res = thisRace->getNameOrganizationFromBib(bib); break;
-            case 4: res = QString::number(results_->at(index.row())->getBibResult()); break;
-            case 5: res = QString::number(results_->at(index.row())->getCardNumber() ); break;
-            case 6: res = QTime::fromMSecsSinceStartOfDay(results_->at(index.row())->getStartMsec()).toString("hh:mm:ss"); break;
-            case 7: res = QTime::fromMSecsSinceStartOfDay(results_->at(index.row())->getFinishMsec()).toString("hh:mm:ss"); break;
-            case 8: res = QTime::fromMSecsSinceStartOfDay(results_->at(index.row())->getResultMsec()).toString("hh:mm:ss.z"); break;
+            case CName:     res = thisRace->getNameFromBib(bib); break;
+            case CSurname:  res = thisRace->getSurnameFromBib(bib); break;
+            case CGroup:    res = thisRace->getNameGroupFromBib(bib); break;
+            case COrg:      res = thisRace->getNameOrganizationFromBib(bib); break;
+            case CBib:      res = QString::number(results_->at(index.row())->getBibResult()); break;
+            case CCardNum:  res = QString::number(results_->at(index.row())->getCardNumber() ); break;
+            case CStart:    res = QTime::fromMSecsSinceStartOfDay(results_->at(index.row())->getStartMsec()).toString("hh:mm:ss"); break;
+            case CFinish:   res = QTime::fromMSecsSinceStartOfDay(results_->at(index.row())->getFinishMsec()).toString("hh:mm:ss"); break;
+            case CResult:   res = QTime::fromMSecsSinceStartOfDay(results_->at(index.row())->getResultMsec()).toString("hh:mm:ss.z"); break;
             default:
                 break;
             }
@@ -59,23 +59,23 @@ QVariant TresultModel::headerData(int section, Qt::Orientation orientation, int 
     {
         switch (section)
         {
-        case 0:return QVariant(QString::fromUtf8("Фамилия"));
-        case 1:return QVariant(QString::fromUtf8("Имя"));
-        case 2:return QVariant(QString::fromUtf8("Группа"));
-        case 3:return QVariant(QString::fromUtf8("Команда"));
-        case 4:return QVariant(QString::fromUtf8("Номер"));
-        case 5:return QVariant(QString::fromUtf8("№ чипа"));
-        case 6:return QVariant(QString::fromUtf8("Старт"));
-        case 7:return QVariant(QString::fromUtf8("Финиш"));
-        case 8:return QVariant(QString::fromUtf8("Результат"));
-        case 9:return QVariant(QString::fromUtf8("Статус"));
-        case 10:return QVariant(QString::fromUtf8("Отсечка"));
-        case 11:return QVariant(QString::fromUtf8("Штраф"));
-        case 12:return QVariant(QString::fromUtf8("Штр.круги"));
-        case 13:return QVariant(QString::fromUtf8("Место"));
-        case 14:return QVariant(QString::fromUtf8("Тип"));
-        case 15:return QVariant(QString::fromUtf8("Аренда чипа"));
-        default: return QVariant();
+        case CName:     return QVariant(QString::fromUtf8("Фамилия"));
+        case CSurname:  return QVariant(QString::fromUtf8("Имя"));
+        case CGroup:    return QVariant(QString::fromUtf8("Группа"));
+        case COrg:      return QVariant(QString::fromUtf8("Команда"));
+        case CBib:      return QVariant(QString::fromUtf8("Номер"));
+        case CCardNum:  return QVariant(QString::fromUtf8("№ чипа"));
+        case CStart:    return QVariant(QString::fromUtf8("Старт"));
+        case CFinish:   return QVariant(QString::fromUtf8("Финиш"));
+        case CResult:   return QVariant(QString::fromUtf8("Результат"));
+        case CStatus:   return QVariant(QString::fromUtf8("Статус"));
+        case COffset:   return QVariant(QString::fromUtf8("Отсечка"));
+        case CPenalty:  return QVariant(QString::fromUtf8("Штраф"));
+        case CPenaltyLaps:return QVariant(QString::fromUtf8("Штр.круги"));
+        case CRank:     return QVariant(QString::fromUtf8("Место"));
+        case CType:     return QVariant(QString::fromUtf8("Тип"));
+        case CRent:     return QVariant(QString::fromUtf8("Аренда чипа"));
+        default:        return QVariant();
         }
     }
     return section + 1;
