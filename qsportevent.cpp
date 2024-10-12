@@ -77,6 +77,11 @@ int QSportEvent::setCardNumFromBib(int bib, int cardNum)
     return races_.at(0)->setCardNumFromBib(bib, cardNum);
 }
 
+int QSportEvent::clearBibInResult(int cardNum)
+{
+    return races_.at(0)->clearBibInResult(cardNum);
+}
+
 int QSportEvent::addResult(int bib, QByteArray ba)
 {
     return races_.at(0)->addResult(bib, ba);

@@ -171,62 +171,68 @@ void MainWindow::readData()
     if (indexStop > -1) {
         QByteArray ba("");
         ba = dataFromComport.mid(indexStart+1, 12);
-        //qDebug() << ba;
-        //ui_log_msg(ba);
-
         st_comport_result* m = reinterpret_cast<st_comport_result*>(ba.data());
 
-        int cardNum = m->cardNum; //ba.mid(0, 4).toInt();
+        int cardNum = m->cardNum;
 
-        if (SEvent.checkingCardNumInResult(cardNum)) {
-            QMessageBox::warning(this, "Внимание!", "Этот чип уже был считан ранее");
+        if (cardNum < 1){
+            QMessageBox::warning(this, "Внимание!", "Чип не инициализирован!");
         }
         else {
-            int bib = SEvent.getBibFromCardNum(cardNum);
-            if ( bib == -1) {
-                qDebug() << "person not found";
+            if (SEvent.checkingCardNumInResult(cardNum)) {
+                QMessageBox::warning(this, "Внимание!", "Этот чип уже был считан ранее");
+            }
+            else {
+                int bib = SEvent.getBibFromCardNum(cardNum);
+                if ( bib == -1) {
+                    qDebug() << "person not found";
 
-                bool button = false;
-                bib = QInputDialog::getInt(this, "input","bib",0,0,1000000,1,&button);
+                    bool button = false;
+                    bib = QInputDialog::getInt(this, "input","bib",0,0,1000000,1,&button);
 
-                if (button) {
-                    int carrent_cardNum_bib = SEvent.getCardNumFromBib(bib);
+                    if (button) {
+                        int carrent_cardNum_bib = SEvent.getCardNumFromBib(bib);
 
-                    if (carrent_cardNum_bib < 1)
-                        SEvent.setCardNumFromBib(bib, cardNum);
-                    else {
-                        if ((carrent_cardNum_bib > 0)&&(carrent_cardNum_bib != cardNum)){
-                            QMessageBox msgBox;
-                            msgBox.setText("Заменить номер чипа?");
-                            msgBox.setInformativeText("Ok - заменить\n Отмена - оставить без изменений");
-                            msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
-                            msgBox.setIcon(QMessageBox::Warning);
-                            msgBox.setDefaultButton(QMessageBox::Cancel);
-                            int change_cardnum = msgBox.exec();
-                            if (change_cardnum == QMessageBox::Ok)
-                                SEvent.setCardNumFromBib(bib, cardNum);
-                            else bib = -1;
+                        if (carrent_cardNum_bib < 1)
+                            SEvent.setCardNumFromBib(bib, cardNum);
+                        else {
+                            if ((carrent_cardNum_bib > 0)&&(carrent_cardNum_bib != cardNum)){
+                                QMessageBox msgBox;
+                                msgBox.setText("Заменить номер чипа?");
+                                msgBox.setInformativeText("Ok - заменить\n Отмена - оставить без изменений");
+                                msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
+                                msgBox.setIcon(QMessageBox::Warning);
+                                msgBox.setDefaultButton(QMessageBox::Cancel);
+                                int change_cardnum = msgBox.exec();
+                                if (change_cardnum == QMessageBox::Ok){
+                                    SEvent.clearBibInResult(carrent_cardNum_bib);
+                                    SEvent.setCardNumFromBib(bib, cardNum);
+                                }
+                                else bib = -1;
+                            }
                         }
                     }
                 }
-            }
 
-            if (bib != -1){
-                SEvent.addResult(bib, ba);
+                if (bib != -1){
+                    SEvent.addResult(bib, ba);
 
-                emit modelResult->dataChanged(modelResult->index(0,0),modelResult->index(0,0));
-                //update_ui_table();
-                //update_ui_result();
+                    emit modelResult->dataChanged(modelResult->index(0,0),modelResult->index(0,0));
 
-                emit proxyModelResult->dataChanged(
-                    proxyModelResult->index(0,0),
-                    proxyModelResult->index(
-                        proxyModelResult->rowCount(),
-                        proxyModelResult->columnCount()));
-                //*/
-                emit proxyModelResult->layoutChanged();
-                proxyModelResult->sort(TresultModel::ColNumTableResult::CResult);
-                ui->tableResult->update();
+                    emit proxyModelResult->dataChanged(
+                        proxyModelResult->index(0,0),
+                        proxyModelResult->index(
+                            proxyModelResult->rowCount(),
+                            proxyModelResult->columnCount()));
+                    //*/
+                    emit proxyModelResult->layoutChanged();
+                    proxyModelResult->sort(TresultModel::ColNumTableResult::CResult);
+                    ui->tableResult->update();
+                    ui_log_msg("Считан и добавлен чип " + QString::number(cardNum) +
+                               " для спортсмена " + QString::number(bib));
+                } else {
+                    ui_log_msg("Считан чип, но не добавлен");
+                }
             }
         }
         dataFromComport.remove(0,indexStop+2);
@@ -490,7 +496,7 @@ void MainWindow::requestOnline(const QString &number)
     persons.append(requestResultBody);
     bodyrequest["persons"] = persons;
     settingsOnline = ui_online->settings();
-    emit postSender->sendRequest(this->settingsOnline.url,bodyrequest);
+    postSender->sendRequest(this->settingsOnline.url,bodyrequest);
 }
 
 

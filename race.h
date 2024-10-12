@@ -64,6 +64,7 @@ public:
     int getBibFromCardNum(int cardNum);
     int getCardNumFromBib(int bib);
     int setCardNumFromBib(int bib, int cardNum);
+    int clearBibInResult(int cardNum);
     int addResult(int bib, QByteArray ba);
 
     QString getNameOrganizationFromBib(int number);

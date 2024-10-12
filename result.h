@@ -100,6 +100,8 @@ public:
     int getResultMsec(){ return data.result_msec;};
     int getBibResult(){return data.bib;};
 
+    void clearBibResult(){data.bib = 0;};
+
     //void setItPerson(QVector<person*>::Iterator it_){it = it_;};
 
 private:

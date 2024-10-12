@@ -301,6 +301,17 @@ int race::setCardNumFromBib(int bib, int cardNum)
     return -1;
 }
 
+int race::clearBibInResult(int cardNum)
+{
+    for(result* x: results_){
+        if (x->getCardNumber() == cardNum){
+            x->clearBibResult();
+            return 0;
+        }
+    }
+    return -1;
+}
+
 QString race::getNameOrganizationFromBib(int number)
 {
     for(person* x: persons_){
