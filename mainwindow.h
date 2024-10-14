@@ -2,6 +2,9 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QMenuBar>
+#include <QMenu>
+
 #include <QStandardItemModel>
 #include <QSortFilterProxyModel>
 
@@ -66,6 +69,8 @@ private slots:
     void on_act_quit_triggered();
     void on_act_open_triggered();
 
+    void openRecent();
+
     void on_act_Sportorg_JSON_triggered();
     void on_act_info_triggered();
     void on_act_import_csv_orgeo_ru_triggered();
@@ -115,7 +120,6 @@ private:
 
     TResultProxyModel* proxyModelResult = nullptr;
 
-
     void ui_log_msg(const QString& str);
 
     QByteArray dataFromComport;
@@ -124,5 +128,18 @@ private:
 
     QSerialPort *comport = nullptr;
     PostRequestSender *postSender = nullptr;
+
+    const int maxFileNr;
+    QMenu* fileMenu;
+    QMenu* recentFilesMenu;
+    QList<QAction*> recentFileActionList;
+
+    QString currentFilePath;
+
+    void createActionsAndConnections();
+    void createMenus();
+
+    void adjustForCurrentFile(const QString& filePath);
+    void updateRecentActionList();
 };
 #endif // MAINWINDOW_H

@@ -24,8 +24,8 @@
 static constexpr std::chrono::seconds kWriteTimeout = std::chrono::seconds{5};
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
-    , ui(new Ui::MainWindow),
+    : QMainWindow(parent), ui(new Ui::MainWindow),
+    maxFileNr(4),
     ui_info(new FormInfo(this)),
     ui_person(new FormPerson(this)),
     ui_online(new FormOnline(this)),
@@ -65,6 +65,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     QObject::connect(comport, &QSerialPort::readyRead, this, &MainWindow::readData);
     QObject::connect(comport, &QSerialPort::bytesWritten, this, &MainWindow::handleBytesWritten);
+
+    createActionsAndConnections();
+    createMenus();
 }
 
 MainWindow::~MainWindow()
@@ -82,6 +85,9 @@ MainWindow::~MainWindow()
     delete modelResult;
 
     delete proxyModelResult;
+
+    delete fileMenu;
+    delete recentFilesMenu;
 }
 
 void MainWindow::initActionsConnections()
@@ -356,11 +362,12 @@ void MainWindow::on_act_quit_triggered()
 void MainWindow::on_act_open_triggered()
 {
     ui_log_msg("on_act_open_triggered");
-    QString file_name = QFileDialog::getOpenFileName(this, "Открыть событие", QDir::currentPath(), "*.json");
-    if (file_name == "") return;
-    ui_log_msg(file_name);
+    QString file_name = QFileDialog::getOpenFileName(this, tr("Открыть событие"), QDir::currentPath(), tr("Событие (*.json)"));
 
-    open_JSON(file_name);
+    if (!file_name.isEmpty()){
+        ui_log_msg(file_name);
+        open_JSON(file_name);
+    }
 }
 
 
@@ -376,6 +383,7 @@ void MainWindow::open_JSON(const QString &path){
     if (path == "") return;
     SEvent.importSportorgJSON(path);
     update_ui_table();
+    adjustForCurrentFile(path);
 }
 
 void MainWindow::update_ui_table(){
