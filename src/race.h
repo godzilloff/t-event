@@ -41,6 +41,8 @@ public:
     void updateData(QJsonObject objJson);
     QJsonObject toJson() const;
 
+    QString getNameRece(){ return data.title;};
+
     QVector<person*> *getPtrPersons(){ return &persons_;};
     QVector<course*> *getPtrCources(){ return &courses_;};
     QVector<group*> *getPtrGroups(){ return &groups_;};

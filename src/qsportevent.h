@@ -30,6 +30,7 @@ public:
     int clearBibInResult(int cardNum);
     int addResult(int bib, QByteArray ba);
 
+    QString getNameEvent(){ return races_.at(0)->getNameRece();};
     QVector<race*> getRaces(){return races_;};
     const st_race& getDataRace(){return races_.at(0)->getDataRace();};
     const st_person* getDataPersonBib(int bib){return races_.at(0)->getDataPersonBib(bib);};

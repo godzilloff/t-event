@@ -141,5 +141,6 @@ private:
 
     void adjustForCurrentFile(const QString& filePath);
     void updateRecentActionList();
+    void updateWindowTitle();
 };
 #endif // MAINWINDOW_H
