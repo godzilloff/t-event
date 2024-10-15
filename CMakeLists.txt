@@ -15,10 +15,10 @@ find_package(Qt6 REQUIRED COMPONENTS SerialPort)
 find_package(Qt6 REQUIRED COMPONENTS Network)
 
 set(PROJECT_SOURCES
-        main.cpp
-        mainwindow.cpp
-        mainwindow.h
-        mainwindow.ui
+        src/main.cpp
+        src/mainwindow.cpp
+        src/mainwindow.h
+        src/mainwindow.ui
 )
 
 set(app_icon_resource_windows "${CMAKE_CURRENT_SOURCE_DIR}/img/icon.rc")
@@ -29,28 +29,28 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
 
-        forminfo.h forminfo.cpp forminfo.ui
         resource.qrc
-        qsportevent.h qsportevent.cpp
-        race.h race.cpp
-        course.h course.cpp
-        group.h group.cpp
-        organization.h organization.cpp
-        person.h person.cpp
-        result.h result.cpp
-        tpersonmodel.h tpersonmodel.cpp
-        tcoursemodel.cpp tcoursemodel.h
-        torganizationmodel.cpp torganizationmodel.h
-        tgroupmodel.cpp tgroupmodel.h
-        tresultmodel.cpp tresultmodel.h
+        src/forminfo.h src/forminfo.cpp src/forminfo.ui
+        src/qsportevent.h src/qsportevent.cpp
+        src/race.h src/race.cpp
+        src/course.h src/course.cpp
+        src/group.h src/group.cpp
+        src/organization.h src/organization.cpp
+        src/person.h src/person.cpp
+        src/result.h src/result.cpp
+        src/tpersonmodel.h src/tpersonmodel.cpp
+        src/tcoursemodel.cpp src/tcoursemodel.h
+        src/torganizationmodel.cpp src/torganizationmodel.h
+        src/tgroupmodel.cpp src/tgroupmodel.h
+        src/tresultmodel.cpp src/tresultmodel.h
 
         ${app_icon_resource_windows}
-        settingsdialog.cpp settingsdialog.h settingsdialog.ui
-        postrequestsender.h postrequestsender.cpp
-        formonline.h formonline.cpp formonline.ui
+        src/settingsdialog.cpp src/settingsdialog.h src/settingsdialog.ui
+        src/postrequestsender.h src/postrequestsender.cpp
+        src/formonline.h src/formonline.cpp src/formonline.ui
 
-        formperson.h formperson.cpp formperson.ui
-        recentfile.cpp
+        src/formperson.h src/formperson.cpp src/formperson.ui
+        src/recentfile.cpp
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET T-Event APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
