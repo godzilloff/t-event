@@ -97,7 +97,7 @@ private:
 
 private:
     Ui::MainWindow *ui;
-    QSportEvent SEvent;
+    std::shared_ptr<QSportEvent> pSEvent;
 
     FormInfo* ui_info = nullptr;
     FormPerson* ui_person = nullptr;

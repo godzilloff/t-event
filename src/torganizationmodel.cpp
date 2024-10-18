@@ -7,9 +7,9 @@ TorganizationModel::TorganizationModel(QObject *parent)
 TorganizationModel::~TorganizationModel()
 {}
 
-int TorganizationModel::reInit(QSportEvent &event)
+int TorganizationModel::reInit(std::shared_ptr<QSportEvent> &event)
 {
-    organizations_ = event.getRaces().at(0)->getPtrOrganizations();
+    organizations_ = event->getRaces().at(0)->getPtrOrganizations();
     return 0;
 }
 

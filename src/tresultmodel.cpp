@@ -7,12 +7,12 @@ TresultModel::TresultModel(QObject *parent)
 TresultModel::~TresultModel()
 {}
 
-int TresultModel::reInit(QSportEvent &event)
+int TresultModel::reInit(std::shared_ptr<QSportEvent>& event)
 {
-    event_ptr = &event;
-    persons_ = event.getRaces().at(0)->getPtrPersons();
-    results_ = event.getRaces().at(0)->getPtrResults();
-    thisRace = event.getRaces().at(0);
+    event_ptr = event;
+    persons_ = event->getRaces().at(0)->getPtrPersons();
+    results_ = event->getRaces().at(0)->getPtrResults();
+    thisRace = event->getRaces().at(0);
     return 0;
 }
 

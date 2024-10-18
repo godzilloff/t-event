@@ -9,12 +9,10 @@ TpersonModel::TpersonModel(QObject *parent)
 TpersonModel::~TpersonModel()
 {}
 
-//TpersonModel::TpersonModel(QSportEvent &event)
-int TpersonModel::reInit(QSportEvent &event)
+int TpersonModel::reInit(std::shared_ptr<QSportEvent> &event)
 {
-    event_ptr = &event;
-    persons_ = event.getRaces().at(0)->getPtrPersons();
-    //organizations_ = event.getRaces().at(0)->getPtrOrganizations();
+    event_ptr = event;
+    persons_ = event->getRaces().at(0)->getPtrPersons();
     return 0;
 }
 

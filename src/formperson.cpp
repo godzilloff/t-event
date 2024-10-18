@@ -3,12 +3,15 @@
 
 #include <QTime>
 #include <QStringListModel>
+#include <QButtonGroup>
 
 FormPerson::FormPerson(QWidget *parent)
     : QDialog(parent)
     , ui(new Ui::FormPerson)
 {
     ui->setupUi(this);
+
+    connect(ui->buttonBox, &QDialogButtonBox::accepted, this, &FormPerson::onAccepted);
 }
 
 FormPerson::~FormPerson()
@@ -16,9 +19,9 @@ FormPerson::~FormPerson()
     delete ui;
 }
 
-void FormPerson::update_sevent(QSportEvent *pSEvent)
+void FormPerson::update_sevent(std::shared_ptr<QSportEvent> &pSEvent)
 {
-    prtSEvent = pSEvent;
+    ptrSEvent = pSEvent;
 }
 
 void FormPerson::recieveDataFromMain(const st_person* data_)
@@ -37,21 +40,29 @@ void FormPerson::recieveDataFromMain(const st_person* data_)
     ui->cb_qual->setCurrentIndex(data_->qual);
     ui->ed_date->setDate(birth_date_d);
     ui->pled_comment->setPlainText(data_->comment);
-    ui->cb_org->setCurrentText(prtSEvent->getNameOrganization(data_->organization_id));
-    ui->cb_group->setCurrentText(prtSEvent->getNameGroup(data_->group_id));
+    ui->cb_org->setCurrentText(ptrSEvent->getNameOrganization(data_->organization_id));
+    ui->cb_group->setCurrentText(ptrSEvent->getNameGroup(data_->group_id));
 
+}
+
+void FormPerson::onAccepted()
+{
+    qDebug() << "Person ok";
+    ptrSEvent->setCardNumFromBib(
+        ui->ed_bib->text().toInt(),
+        ui->ed_cardNum->text().toInt());
 }
 
 void FormPerson::update_organization()
 {
-    QStringList names = prtSEvent->getNamesOrganization();
+    QStringList names = ptrSEvent->getNamesOrganization();
     ui->cb_org->clear();
     ui->cb_org->addItems(names);
 }
 
 void FormPerson::update_group()
 {
-    QStringList names = prtSEvent->getNamesGroup();
+    QStringList names = ptrSEvent->getNamesGroup();
     ui->cb_group->clear();
     ui->cb_group->addItems(names);
 }

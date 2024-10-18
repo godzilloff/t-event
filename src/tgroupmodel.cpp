@@ -7,10 +7,10 @@ TgroupModel::TgroupModel(QObject *parent)
 TgroupModel::~TgroupModel()
 {}
 
-int TgroupModel::reInit(QSportEvent &event)
+int TgroupModel::reInit(std::shared_ptr<QSportEvent> &event)
 {
-    groups_ = event.getRaces().at(0)->getPtrGroups();
-    thisRace = event.getRaces().at(0);
+    groups_ = event->getRaces().at(0)->getPtrGroups();
+    thisRace = event->getRaces().at(0);
     return 0;
 }
 

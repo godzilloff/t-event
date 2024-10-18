@@ -19,17 +19,19 @@ public:
     explicit FormPerson(QWidget *parent = nullptr);
     ~FormPerson();
 
-    void update_sevent(QSportEvent* pSEvent);
+    void update_sevent(std::shared_ptr<QSportEvent> &pSEvent);
 
 public slots:
     void recieveDataFromMain(const st_person* data_);
 
 private:
     Ui::FormPerson *ui;
-    QSportEvent* prtSEvent;
+
+    std::shared_ptr<QSportEvent> ptrSEvent;
 
     void update_organization();
     void update_group();
+    void onAccepted();
 };
 
 #endif // FORMPERSON_H

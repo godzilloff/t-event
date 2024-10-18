@@ -25,7 +25,6 @@ static constexpr std::chrono::seconds kWriteTimeout = std::chrono::seconds{5};
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow),
-    maxFileNr(4),
     ui_info(new FormInfo(this)),
     ui_person(new FormPerson(this)),
     ui_online(new FormOnline(this)),
@@ -36,18 +35,17 @@ MainWindow::MainWindow(QWidget *parent)
     modelGroup(new TgroupModel()),
     modelResult (new TresultModel()),
     proxyModelResult (new TResultProxyModel(this)),
-
     comport_timer(new QTimer(this)),
+
     comport(new QSerialPort(this)),
-    postSender(new PostRequestSender(this))
+    postSender(new PostRequestSender(this)),
+    maxFileNr(4)
 
 {
     ui->setupUi(this);
     ui_info->hide();
     ui_person->hide();
     ui_online->hide();
-
-    ui_person->update_sevent(&SEvent);
 
     initActionsConnections();
 
@@ -185,11 +183,11 @@ void MainWindow::readData()
             QMessageBox::warning(this, "Внимание!", "Чип не инициализирован!");
         }
         else {
-            if (SEvent.checkingCardNumInResult(cardNum)) {
+            if (pSEvent->checkingCardNumInResult(cardNum)) {
                 QMessageBox::warning(this, "Внимание!", "Этот чип уже был считан ранее");
             }
             else {
-                int bib = SEvent.getBibFromCardNum(cardNum);
+                int bib = pSEvent->getBibFromCardNum(cardNum);
                 if ( bib == -1) {
                     qDebug() << "person not found";
 
@@ -197,10 +195,10 @@ void MainWindow::readData()
                     bib = QInputDialog::getInt(this, "input","bib",0,0,1000000,1,&button);
 
                     if (button) {
-                        int carrent_cardNum_bib = SEvent.getCardNumFromBib(bib);
+                        int carrent_cardNum_bib = pSEvent->getCardNumFromBib(bib);
 
                         if (carrent_cardNum_bib < 1)
-                            SEvent.setCardNumFromBib(bib, cardNum);
+                            pSEvent->setCardNumFromBib(bib, cardNum);
                         else {
                             if ((carrent_cardNum_bib > 0)&&(carrent_cardNum_bib != cardNum)){
                                 QMessageBox msgBox;
@@ -211,8 +209,8 @@ void MainWindow::readData()
                                 msgBox.setDefaultButton(QMessageBox::Cancel);
                                 int change_cardnum = msgBox.exec();
                                 if (change_cardnum == QMessageBox::Ok){
-                                    SEvent.clearBibInResult(carrent_cardNum_bib);
-                                    SEvent.setCardNumFromBib(bib, cardNum);
+                                    pSEvent->clearBibInResult(carrent_cardNum_bib);
+                                    pSEvent->setCardNumFromBib(bib, cardNum);
                                 }
                                 else bib = -1;
                             }
@@ -221,7 +219,7 @@ void MainWindow::readData()
                 }
 
                 if (bib != -1){
-                    SEvent.addResult(bib, ba);
+                    pSEvent->addResult(bib, ba);
 
                     emit modelResult->dataChanged(modelResult->index(0,0),modelResult->index(0,0));
 
@@ -381,7 +379,12 @@ void MainWindow::on_act_Sportorg_JSON_triggered(){
 void MainWindow::open_JSON(const QString &path){
     ui_log_msg("begin parse");
     if (path == "") return;
-    SEvent.importSportorgJSON(path);
+
+    pSEvent.reset();
+    pSEvent = std::make_shared<QSportEvent>();
+    pSEvent->importSportorgJSON(path);
+
+    ui_person->update_sevent(pSEvent);
     update_ui_table();
     adjustForCurrentFile(path);
 }
@@ -390,7 +393,7 @@ void MainWindow::update_ui_table(){
     ui_log_msg("update_ui_table");
 
     //TpersonModel *modelPerson = new TpersonModel();
-    modelPerson->reInit(SEvent);
+    modelPerson->reInit(pSEvent);
     ui->tablePerson->setSortingEnabled(true);
     ui->tablePerson->setModel(modelPerson);
     ui->tablePerson->resizeColumnsToContents();
@@ -398,19 +401,19 @@ void MainWindow::update_ui_table(){
     //ui->tablePerson->resizeRowsToContents();
 
     //TcourseModel *modelCourse = new TcourseModel();
-    modelCourse->reInit(SEvent);
+    modelCourse->reInit(pSEvent);
     ui->tableDist->setModel(modelCourse);
     ui->tableDist->resizeColumnsToContents();
     ui->tableDist->verticalHeader()->setDefaultSectionSize(20);
 
     //TorganizationModel *modelOrganization = new TorganizationModel();
-    modelOrganization->reInit(SEvent);
+    modelOrganization->reInit(pSEvent);
     ui->tableOrg->setModel(modelOrganization);
     ui->tableOrg->resizeColumnsToContents();
     ui->tableOrg->verticalHeader()->setDefaultSectionSize(20);
 
     //TgroupModel *modelGroup = new TgroupModel();
-    modelGroup->reInit(SEvent);
+    modelGroup->reInit(pSEvent);
     ui->tableGroup->setModel(modelGroup);
     ui->tableGroup->resizeColumnsToContents();
     ui->tableGroup->verticalHeader()->setDefaultSectionSize(20);
@@ -423,7 +426,7 @@ void MainWindow::update_ui_result(){
     //TresultModel *modelResult = new TresultModel();
     //QSortFilterProxyModel* proxyModelResult = new QSortFilterProxyModel(this);
 
-    modelResult->reInit(SEvent);
+    modelResult->reInit(pSEvent);
     proxyModelResult->setSourceModel(nullptr);
     proxyModelResult->setSourceModel(modelResult);
 
@@ -442,7 +445,7 @@ void MainWindow::update_ui_result(){
 
 void MainWindow::on_act_info_triggered()
 {
-    if (!SEvent.empty()) emit sendDataToDialog(SEvent.getDataRace());
+    if (!pSEvent->empty()) emit sendDataToDialog(pSEvent->getDataRace());
     ui_info->show();
 }
 
@@ -498,7 +501,7 @@ void MainWindow::requestOnline(const QString &number)
 {
     ui_log_msg("requestOnline");
     ui_log_msg(number);
-    QJsonObject requestResultBody = SEvent.getResultToOnline(number);
+    QJsonObject requestResultBody = pSEvent->getResultToOnline(number);
     QJsonArray persons;
     QJsonObject bodyrequest;
     persons.append(requestResultBody);
@@ -521,7 +524,7 @@ void MainWindow::on_act_save_as_triggered()
 
     ui_log_msg("Save as file");
     ui_log_msg(file_name);
-    SEvent.exportSportorgJSON(file_name);
+    pSEvent->exportSportorgJSON(file_name);
 }
 
 void MainWindow::on_tablePerson_doubleClicked(const QModelIndex &index){
@@ -529,7 +532,7 @@ void MainWindow::on_tablePerson_doubleClicked(const QModelIndex &index){
     int row = index.row();
 
     QString bib = modelPerson->data(modelPerson->index(row, 6),Qt::DisplayRole).toString();
-    const st_person* data_ = SEvent.getDataPersonBib(bib.toInt());
+    const st_person* data_ = pSEvent->getDataPersonBib(bib.toInt());
     if (data_ != nullptr){
         emit sendDataPersonToDialog(data_);
         ui_person->show();

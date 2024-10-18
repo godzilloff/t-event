@@ -36,7 +36,7 @@ public:
     //explicit TresultModel(QSportEvent &event);
     ~TresultModel();
 
-    int reInit(QSportEvent &event);
+    int reInit(std::shared_ptr<QSportEvent> &event);
     int rowCount(const QModelIndex &parent) const;
     int columnCount(const QModelIndex &parent) const;
     QVariant data(const QModelIndex &index, int role) const;
@@ -44,7 +44,7 @@ public:
 
 
 private:
-    QSportEvent *event_ptr = nullptr;
+    std::shared_ptr<QSportEvent> event_ptr = nullptr;
     QVector<person*> *persons_ = nullptr;
     QVector<result*> *results_ = nullptr;
     race* thisRace = nullptr;

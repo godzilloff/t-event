@@ -8,9 +8,9 @@ TcourseModel::~TcourseModel()
 {}
 
 //TcourseModel::TcourseModel(QSportEvent &event)
-int TcourseModel::reInit(QSportEvent &event)
+int TcourseModel::reInit(std::shared_ptr<QSportEvent> &event)
 {
-    courses_ = event.getRaces().at(0)->getPtrCources();
+    courses_ = event->getRaces().at(0)->getPtrCources();
     return 0;
 }
 

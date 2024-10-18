@@ -53,7 +53,7 @@ void MainWindow::adjustForCurrentFile(const QString &filePath){
 }
 
 void MainWindow::updateWindowTitle(){
-    QString title = SEvent.getNameEvent() + " ["+currentFilePath+"]" + " - T-Event 0.5.1";
+    QString title = pSEvent->getNameEvent() + " ["+currentFilePath+"]" + " - T-Event 0.5.1";
     this->setWindowTitle(title);
 }
 

@@ -12,9 +12,13 @@
 
 QSportEvent::QSportEvent(QObject *parent)
     : QObject{parent}
-{}
+{
+    //qDebug() << "ctor";
+}
 
-QSportEvent::~QSportEvent() {}
+QSportEvent::~QSportEvent() {
+    //qDebug() << "dtor";
+}
 
 
 const QJsonObject QSportEvent::getResultToOnline(const QString& number){
