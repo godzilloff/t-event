@@ -24,6 +24,9 @@ public:
 public slots:
     void recieveDataFromMain(const st_person* data_);
 
+private slots:
+    void on_check_numCard_textChanged(const QString &text);
+
 private:
     Ui::FormPerson *ui;
 

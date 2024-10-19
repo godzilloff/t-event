@@ -4,6 +4,7 @@
 #include <QTime>
 #include <QStringListModel>
 #include <QButtonGroup>
+#include <QPushButton>
 
 FormPerson::FormPerson(QWidget *parent)
     : QDialog(parent)
@@ -12,6 +13,8 @@ FormPerson::FormPerson(QWidget *parent)
     ui->setupUi(this);
 
     connect(ui->buttonBox, &QDialogButtonBox::accepted, this, &FormPerson::onAccepted);
+    connect(ui->ed_cardNum, &QLineEdit::textChanged, this, &FormPerson::on_check_numCard_textChanged);
+
 }
 
 FormPerson::~FormPerson()
@@ -43,6 +46,20 @@ void FormPerson::recieveDataFromMain(const st_person* data_)
     ui->cb_org->setCurrentText(ptrSEvent->getNameOrganization(data_->organization_id));
     ui->cb_group->setCurrentText(ptrSEvent->getNameGroup(data_->group_id));
 
+}
+
+void FormPerson::on_check_numCard_textChanged(const QString &text)
+{
+    //qDebug() << "on_check_numCard_textChanged ok";
+    int card = text.toInt();
+    if (ptrSEvent->isCardNumFree(card))
+    {
+        ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(true);
+        ui->lb_check_cardNum->setText(text + " - доступен");
+    } else {
+        ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(false);
+        ui->lb_check_cardNum->setText(text + " - занят " + ptrSEvent->getPersonInfoFromCardNum(card));
+    }
 }
 
 void FormPerson::onAccepted()

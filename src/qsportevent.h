@@ -22,8 +22,10 @@ public:
     const QStringList getNamesOrganization();
     const QStringList getNamesGroup();
 
+    const bool isCardNumFree(int cardNum);
     const bool checkingCardNumInPerson(int bib, int cardNum);
     const bool checkingCardNumInResult(int cardNum);
+    const QString getPersonInfoFromCardNum(int cardNum);
     const int getBibFromCardNum(int cardNum);
     int getCardNumFromBib(int bib);
     int setCardNumFromBib(int bib, int cardNum);

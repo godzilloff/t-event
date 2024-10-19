@@ -256,6 +256,15 @@ QString race::getFullNameFromBib(int number)
     return "";
 }
 
+const bool race::isCardNumFree(int cardNum)
+{
+    for(person* x: persons_){
+        if (x->getCardNumber() == cardNum)
+            return false;
+    }
+    return true;
+}
+
 const bool race::checkingCardNumInPerson(int bib, int cardNum)
 {
     for(person* x: persons_){
@@ -272,6 +281,18 @@ const bool race::checkingCardNumInResult(int cardNum)
             return true;
     }
     return false;
+}
+
+const QString race::getPersonInfoFromCardNum(int cardNum)
+{
+    for(person* x: persons_){
+        if (x->getCardNumber() == cardNum){
+            int bib = x->getBib();
+                return x->getFullName() + " (" + QString::number(bib) + ", "
+                   + getNameOrganizationFromBib(bib) + ")";
+        }
+    }
+    return QString{};
 }
 
 int race::getBibFromCardNum(int cardNum)
@@ -320,6 +341,18 @@ QString race::getNameOrganizationFromBib(int number)
     }
     return "";
 }
+
+
+// QString race::getNameOrganization(QString id)
+// {
+//     QString str_name{};
+//     auto it = std::find_if(
+//         organizations_.begin(),organizations_.end(),
+//         [id](organization* x){return x->getId() == id;});
+//
+//     return it == organizations_.end() ?
+//                QString{} : (*it)->getName();
+// }
 
 QString race::getNameOrganization(QString id)
 {

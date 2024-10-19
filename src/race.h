@@ -61,8 +61,10 @@ public:
     QString getSurnameFromBib(int number);
     QString getFullNameFromBib(int number);
 
+    const bool isCardNumFree(int cardNum);
     const bool checkingCardNumInPerson(int bib, int cardNum);
     const bool checkingCardNumInResult(int cardNum);
+    const QString getPersonInfoFromCardNum(int cardNum);
     int getBibFromCardNum(int cardNum);
     int getCardNumFromBib(int bib);
     int setCardNumFromBib(int bib, int cardNum);
