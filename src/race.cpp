@@ -220,6 +220,15 @@ const st_person* race::getDataPersonBib(int number)
     return nullptr;
 }
 
+const st_result* race::getDataResultBib(int number)
+{
+    for(result* x: results_){
+        if (x->getBibResult() == number)
+            return x->getDataResult();
+    }
+    return nullptr;
+}
+
 int race::getIndexPerson(int number)
 {
     for(person* x: persons_){
@@ -256,6 +265,15 @@ QString race::getFullNameFromBib(int number)
     return "";
 }
 
+const bool race::isBibFree(int bib)
+{
+    for(person* x: persons_){
+        if (x->getBib() == bib)
+            return false;
+    }
+    return true;
+}
+
 const bool race::isCardNumFree(int cardNum)
 {
     for(person* x: persons_){
@@ -274,6 +292,15 @@ const bool race::checkingCardNumInPerson(int bib, int cardNum)
     return false;
 }
 
+const bool race::isResultBibFree(int bib)
+{
+    for(result* x: results_){
+        if (x->getBibResult() == bib)
+            return false;
+    }
+    return true;
+}
+
 const bool race::checkingCardNumInResult(int cardNum)
 {
     for(result* x: results_){
@@ -281,6 +308,17 @@ const bool race::checkingCardNumInResult(int cardNum)
             return true;
     }
     return false;
+}
+
+const QString race::getPersonInfoFromBib(int bib)
+{
+    for(person* x: persons_){
+        if (x->getBib() == bib){
+            return x->getFullName() + " (" + QString::number(bib) + ", "
+                   + getNameOrganizationFromBib(bib) + ")";
+        }
+    }
+    return QString{};
 }
 
 const QString race::getPersonInfoFromCardNum(int cardNum)
@@ -291,6 +329,15 @@ const QString race::getPersonInfoFromCardNum(int cardNum)
                 return x->getFullName() + " (" + QString::number(bib) + ", "
                    + getNameOrganizationFromBib(bib) + ")";
         }
+    }
+    return QString{};
+}
+
+const QString race::getResultFromBib(int bib)
+{
+    for(result* x: results_){
+        if (x->getBibResult() == bib)
+            return x->getResultStr();
     }
     return QString{};
 }

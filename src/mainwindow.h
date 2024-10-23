@@ -11,6 +11,7 @@
 #include "qsportevent.h"
 #include "forminfo.h"
 #include "formperson.h"
+#include "formresult.h"
 #include "formonline.h"
 #include "settingsdialog.h"
 
@@ -48,6 +49,7 @@ public:
 signals:
     void sendDataToDialog(const st_race& data_);
     void sendDataPersonToDialog(const st_person* data_);
+    void sendDataResultToDialog(const st_result* data_);
 
 
 protected:
@@ -88,7 +90,8 @@ private slots:
 
     void on_act_save_as_triggered();
 
-    void on_tablePerson_doubleClicked(const QModelIndex &index);
+    void onTablePerson_dblclk(const QModelIndex &index);
+    void onTableResult_dblclk(const QModelIndex &index);
 
 private:
     void initActionsConnections();
@@ -101,6 +104,7 @@ private:
 
     FormInfo* ui_info = nullptr;
     FormPerson* ui_person = nullptr;
+    FormResult* ui_result = nullptr;
     FormOnline* ui_online = nullptr;
     SettingsDialog* ui_com_settings = nullptr;
 

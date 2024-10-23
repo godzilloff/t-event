@@ -4,7 +4,7 @@
 
 #include <QJsonObject>
 #include <QJsonArray>
-
+#include <QTime>
 //#include "person.h"
 
 #pragma pack(push, 1)
@@ -96,11 +96,14 @@ public:
     int getCardNumber(){ return data.card_number;};
     int getStartMsec(){ return data.start_msec;};
     int getFinishMsec(){ return data.finish_msec;};
-    QString getResultStr(){ return data.result;};
+    //QString getResultStr(){ return data.result;};
+    QString getResultStr(){ return QTime::fromMSecsSinceStartOfDay(data.result_msec).toString("hh:mm:ss");};
     int getResultMsec(){ return data.result_msec;};
     int getBibResult(){return data.bib;};
 
     void clearBibResult(){data.bib = 0;};
+
+    const st_result* getDataResult(){ return &data;};
 
     //void setItPerson(QVector<person*>::Iterator it_){it = it_;};
 

@@ -22,10 +22,14 @@ public:
     const QStringList getNamesOrganization();
     const QStringList getNamesGroup();
 
+    const bool isBibFree(int bib);
     const bool isCardNumFree(int cardNum);
+    const bool isResultBibFree(int bib);
     const bool checkingCardNumInPerson(int bib, int cardNum);
     const bool checkingCardNumInResult(int cardNum);
+    const QString getPersonInfoFromBib(int bib);
     const QString getPersonInfoFromCardNum(int cardNum);
+    const QString getResultFromBib(int bib);
     const int getBibFromCardNum(int cardNum);
     int getCardNumFromBib(int bib);
     int setCardNumFromBib(int bib, int cardNum);
@@ -36,6 +40,7 @@ public:
     QVector<race*> getRaces(){return races_;};
     const st_race& getDataRace(){return races_.at(0)->getDataRace();};
     const st_person* getDataPersonBib(int bib){return races_.at(0)->getDataPersonBib(bib);};
+    const st_result* getDataResultBib(int bib){return races_.at(0)->getDataResultBib(bib);};
 
     const QJsonObject getResultToOnline(const QString& number);
     bool empty(){ return races_.size() == 0;};

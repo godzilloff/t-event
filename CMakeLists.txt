@@ -51,6 +51,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
 
         src/formperson.h src/formperson.cpp src/formperson.ui
         src/recentfile.cpp
+        src/formresult.h src/formresult.cpp src/formresult.ui
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET T-Event APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR

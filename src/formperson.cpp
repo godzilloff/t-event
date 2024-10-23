@@ -13,7 +13,7 @@ FormPerson::FormPerson(QWidget *parent)
     ui->setupUi(this);
 
     connect(ui->buttonBox, &QDialogButtonBox::accepted, this, &FormPerson::onAccepted);
-    connect(ui->ed_cardNum, &QLineEdit::textChanged, this, &FormPerson::on_check_numCard_textChanged);
+    connect(ui->ed_cardNum, &QLineEdit::textChanged, this, &FormPerson::onCheck_numCard);
 
 }
 
@@ -48,7 +48,7 @@ void FormPerson::recieveDataFromMain(const st_person* data_)
 
 }
 
-void FormPerson::on_check_numCard_textChanged(const QString &text)
+void FormPerson::onCheck_numCard(const QString &text)
 {
     //qDebug() << "on_check_numCard_textChanged ok";
     int card = text.toInt();

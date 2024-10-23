@@ -27,6 +27,7 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow),
     ui_info(new FormInfo(this)),
     ui_person(new FormPerson(this)),
+    ui_result(new FormResult(this)),
     ui_online(new FormOnline(this)),
     ui_com_settings(new SettingsDialog(this)),
     modelPerson (new TpersonModel()),
@@ -45,15 +46,17 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
     ui_info->hide();
     ui_person->hide();
+    ui_result->hide();
     ui_online->hide();
 
     initActionsConnections();
 
+    QObject::connect(ui->tablePerson, &QTableView::doubleClicked,this, &MainWindow::onTablePerson_dblclk);
+    QObject::connect(ui->tableResult, &QTableView::doubleClicked,this, &MainWindow::onTableResult_dblclk);
+
     QObject::connect(this, &MainWindow::sendDataToDialog, ui_info, &FormInfo::recieveDataFromMain);
-
-    QObject::connect(ui->tablePerson, &QTableView::doubleClicked,this, &MainWindow::on_tablePerson_doubleClicked);
-
     QObject::connect(this, &MainWindow::sendDataPersonToDialog, ui_person, &FormPerson::recieveDataFromMain);
+    QObject::connect(this, &MainWindow::sendDataResultToDialog, ui_result, &FormResult::recieveDataFromMain);
 
     QObject::connect(modelResult,&QAbstractItemModel::dataChanged,proxyModelResult,&QSortFilterProxyModel::invalidate);
 
@@ -73,6 +76,7 @@ MainWindow::~MainWindow()
     delete ui;
     delete ui_info;
     delete ui_person;
+    delete ui_result;
     delete comport_timer;
     delete comport;
 
@@ -385,6 +389,7 @@ void MainWindow::open_JSON(const QString &path){
     pSEvent->importSportorgJSON(path);
 
     ui_person->update_sevent(pSEvent);
+    ui_result->update_sevent(pSEvent);
     update_ui_table();
     adjustForCurrentFile(path);
 }
@@ -527,7 +532,7 @@ void MainWindow::on_act_save_as_triggered()
     pSEvent->exportSportorgJSON(file_name);
 }
 
-void MainWindow::on_tablePerson_doubleClicked(const QModelIndex &index){
+void MainWindow::onTablePerson_dblclk(const QModelIndex &index){
     ui_log_msg("on_doubleclick_person");
     int row = index.row();
 
@@ -538,5 +543,21 @@ void MainWindow::on_tablePerson_doubleClicked(const QModelIndex &index){
         ui_person->show();
     }
 
+}
+
+void MainWindow::onTableResult_dblclk(const QModelIndex &index)
+{
+    ui_log_msg("on_doubleclick_result");
+    int row = index.row();
+
+    QModelIndex index_res = ui->tableResult->currentIndex();
+
+    QString bib = index_res.model()->data(
+       index_res.model()->index(row, TresultModel::ColNumTableResult::CBib),Qt::DisplayRole).toString();
+    const st_result* data_ = pSEvent->getDataResultBib(bib.toInt());
+    if (data_ != nullptr){
+        emit sendDataResultToDialog(data_);
+        ui_result->show();
+    }
 }
 

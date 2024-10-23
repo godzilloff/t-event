@@ -56,9 +56,19 @@ const QStringList QSportEvent::getNamesGroup()
     return names;
 }
 
+const bool QSportEvent::isBibFree(int bib)
+{
+    return races_.at(0)->isBibFree(bib);
+}
+
 const bool QSportEvent::isCardNumFree(int cardNum)
 {
     return races_.at(0)->isCardNumFree(cardNum);
+}
+
+const bool QSportEvent::isResultBibFree(int bib)
+{
+    return races_.at(0)->isResultBibFree(bib);
 }
 
 const bool QSportEvent::checkingCardNumInPerson(int bib, int cardNum)
@@ -71,9 +81,19 @@ const bool QSportEvent::checkingCardNumInResult(int cardNum)
     return races_.at(0)->checkingCardNumInResult(cardNum);
 }
 
+const QString QSportEvent::getPersonInfoFromBib(int bib)
+{
+    return races_.at(0)->getPersonInfoFromBib(bib);
+}
+
 const QString QSportEvent::getPersonInfoFromCardNum(int cardNum)
 {
     return races_.at(0)->getPersonInfoFromCardNum(cardNum);
+}
+
+const QString QSportEvent::getResultFromBib(int bib)
+{
+    return races_.at(0)->getResultFromBib(bib);
 }
 
 const int QSportEvent::getBibFromCardNum(int cardNum)

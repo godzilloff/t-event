@@ -56,15 +56,20 @@ public:
     int getIndexPerson(int number);
 
     const st_person* getDataPersonBib(int number);
+    const st_result* getDataResultBib(int number);
 
     QString getNameFromBib(int number);
     QString getSurnameFromBib(int number);
     QString getFullNameFromBib(int number);
 
+    const bool isBibFree(int bib);
     const bool isCardNumFree(int cardNum);
+    const bool isResultBibFree(int bib);
     const bool checkingCardNumInPerson(int bib, int cardNum);
     const bool checkingCardNumInResult(int cardNum);
+    const QString getPersonInfoFromBib(int bib);
     const QString getPersonInfoFromCardNum(int cardNum);
+    const QString getResultFromBib(int bib);
     int getBibFromCardNum(int cardNum);
     int getCardNumFromBib(int bib);
     int setCardNumFromBib(int bib, int cardNum);
