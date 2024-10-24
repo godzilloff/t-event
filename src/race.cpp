@@ -369,6 +369,17 @@ int race::setCardNumFromBib(int bib, int cardNum)
     return -1;
 }
 
+int race::setBibFromCardNum(int cardNum, int bib)
+{
+    for(result* x: results_){
+        if (x->getCardNumber() == cardNum){
+            x->setBibResult(bib);
+            return 0;
+        }
+    }
+    return -1;
+}
+
 int race::clearBibInResult(int cardNum)
 {
     for(result* x: results_){

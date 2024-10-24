@@ -102,6 +102,7 @@ public:
     int getBibResult(){return data.bib;};
 
     void clearBibResult(){data.bib = 0;};
+    void setBibResult(int bib){data.bib = bib;};
 
     const st_result* getDataResult(){ return &data;};
 

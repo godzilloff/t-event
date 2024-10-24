@@ -69,5 +69,5 @@ void FormResult::onCheck_bib(const QString &)
 
 void FormResult::onAccepted()
 {
-    //
+    ptrSEvent->setBibFromCardNum(ptrDataResult->card_number, ui->ed_bib->value());
 }

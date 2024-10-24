@@ -73,6 +73,7 @@ public:
     int getBibFromCardNum(int cardNum);
     int getCardNumFromBib(int bib);
     int setCardNumFromBib(int bib, int cardNum);
+    int setBibFromCardNum(int cardNum, int bib);
     int clearBibInResult(int cardNum);
     int addResult(int bib, QByteArray ba);
 
