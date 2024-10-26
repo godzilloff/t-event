@@ -256,6 +256,15 @@ QJsonObject race::toJson() const
     return json;
 }
 
+const st_person* race::getDataPersonId(QString id)
+{
+    for(person* x: persons_){
+        if (x->getId() == id)
+            return x->getDataPersonBib();
+    }
+    return nullptr;
+}
+
 const st_person* race::getDataPersonBib(int number)
 {
     for(person* x: persons_){
@@ -292,7 +301,7 @@ void race::addPerson(QString name, QString id_org, QString id_gr, QString qual, 
     dt.group_id = id_gr;
     dt.year = year.toInt();
     dt.qual = qual.toInt();
-    dt.comment = dt.comment;
+    dt.comment = comment;
 
     person* per = new person(dt);
     persons_.push_back(per);

@@ -58,6 +58,7 @@ public:
     int getIndexPerson(int number);
     void addPerson(QString name, QString id_org, QString id_gr, QString qual,  QString year, QString comment);
 
+    const st_person* getDataPersonId(QString id);
     const st_person* getDataPersonBib(int number);
     const st_result* getDataResultBib(int number);
 

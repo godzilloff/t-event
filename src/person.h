@@ -152,6 +152,7 @@ public:
     QString getComment(){ return data.comment;};
     QString getOrganizationId(){ return data.organization_id;};
     QString getGroupId(){ return data.group_id;};
+    QString getId(){ return data.id;};
 
     const st_person* getDataPersonBib(){ return &data;};
 

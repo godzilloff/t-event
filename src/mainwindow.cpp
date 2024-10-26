@@ -20,6 +20,7 @@
 #include<QJsonDocument>
 #include<QJsonObject>
 
+#include "tpersonmodel.h"
 
 static constexpr std::chrono::seconds kWriteTimeout = std::chrono::seconds{5};
 
@@ -526,8 +527,10 @@ void MainWindow::onTablePerson_dblclk(const QModelIndex &index){
     ui_log_msg("on_doubleclick_person");
     int row = index.row();
 
-    QString bib = modelPerson->data(modelPerson->index(row, 6),Qt::DisplayRole).toString();
-    const st_person* data_ = pSEvent->getDataPersonBib(bib.toInt());
+    QString pid = modelPerson->data(
+                    modelPerson->index(row, TpersonModel::ColNumTablePerson::CID),
+                        Qt::DisplayRole).toString();
+    const st_person* data_ = pSEvent->getDataPersonId(pid);
     if (data_ != nullptr){
         emit sendDataPersonToDialog(data_);
         ui_person->show();

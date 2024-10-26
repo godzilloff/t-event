@@ -11,6 +11,21 @@ class TpersonModel : public QAbstractTableModel
 {
     Q_OBJECT
 public:
+    enum ColNumTablePerson {
+        CSurname = 0,
+        CName,
+        CQual,
+        CGroup,
+        COrg,
+        CYear,
+        CBib,
+        CCardNum,
+        CStart,
+        CFinish,
+        CComent,
+        CID
+    };
+
     explicit TpersonModel(QObject *parent = nullptr);
     //explicit TpersonModel(QSportEvent &event);
     ~TpersonModel();
