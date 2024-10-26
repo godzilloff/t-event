@@ -2,6 +2,13 @@
 
 organization::organization() {}
 
+organization::organization(const QString &id, const QString &name, const QString contact)
+{
+    data.id = id;
+    data.name = name;
+    data.contact = contact;
+}
+
 organization::organization(QJsonObject objJson)
 {
     data.name = objJson.value("name").toString();

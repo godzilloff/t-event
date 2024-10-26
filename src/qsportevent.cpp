@@ -6,20 +6,23 @@
 #include <QJsonArray>
 #include <QJsonParseError>
 #include <QFile>
-
-
 #include <QMessageBox>
 
 QSportEvent::QSportEvent(QObject *parent)
     : QObject{parent}
 {
-    //qDebug() << "ctor";
+    //qDebug() << "ctor QSportEvent";
 }
 
 QSportEvent::~QSportEvent() {
-    //qDebug() << "dtor";
+    //qDebug() << "dtor QSportEvent";
+    if (races_.size() > 0) delete races_.at(0);
 }
 
+void QSportEvent::addRace(){
+    race* race_ = new race();
+    races_.push_back(race_);
+}
 
 const QJsonObject QSportEvent::getResultToOnline(const QString& number){
     int bib = number.toInt();
@@ -186,4 +189,38 @@ void QSportEvent::exportSportorgJSON(const QString &path)
     QJsonObject gameObject = toJson();
     saveFile.write(QJsonDocument(gameObject).toJson());
     saveFile.close();
+}
+
+// Формат csv с сайта orgeo.ru:
+//Группа;ФИО;Коллектив;Представитель;Разряд;Номер;Год рождения;Номер чипа;Комментарий;
+void QSportEvent::importCSV(const QString& path){
+
+    QFile file(path);
+    if ( !file.open(QFile::ReadOnly | QFile::Text) ) {
+        qDebug() << "File not exists";
+    } else {
+        addRace();
+        // Создаём поток для извлечения данных из файла
+        QTextStream in(&file);
+        in.setEncoding(QStringConverter::LastEncoding);
+        // Считываем данные до конца файла
+        while (!in.atEnd())
+        {
+            // ... построчно
+            QString line = in.readLine();
+            line = line.trimmed(); // Удаляем пробелы в начале и конце строки
+            // Разделяем строку по разделителю
+            QStringList data = line.split(";");
+
+            for (int i = 0; i < data.size(); i++) {
+                // Обработка данных
+                data[i] = data[i].trimmed();
+            }
+            QString id_group = races_.at(0)->addGroupByName(data[0]);
+            QString id_org = races_.at(0)->addOrgByNameAndContact(data[2],data[3]);
+            races_.at(0)->addPerson(data[1], id_org,id_group , data[4], data[6], data[8]);
+            //csvModel->insertRow(csvModel->rowCount(), standardItemsList);
+        }
+        file.close();
+    }
 }

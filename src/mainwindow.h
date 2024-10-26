@@ -114,8 +114,6 @@ private:
     bool fl_connectedComport = false;
     SettingsDialog::Settings settingsComport;
 
-    QStandardItemModel *csvModel;        // указатель на модель данных из CSV файла
-
     TpersonModel *modelPerson = nullptr;
     TcourseModel *modelCourse = nullptr;
     TorganizationModel *modelOrganization = nullptr;

@@ -5,6 +5,18 @@ person::person(int bib){
     //qDebug() << "person::person()\n";
 }
 
+person::person(st_person &dt)
+{
+    data.name = dt.name;
+    data.surname = dt.surname;
+    data.id = dt.id;
+    data.organization_id = dt.organization_id;
+    data.group_id = dt.group_id;
+    data.year = dt.year;
+    data.qual = dt.qual;
+    data.comment = dt.comment;
+}
+
 person::person(QJsonObject objJson)
 {
     data.bib = objJson.value("bib").toInt();
@@ -78,7 +90,8 @@ int person::setCardNum(int cardNum)
 QString getQ(int q){
     QString res = "";
     switch (q) {
-    case 0: res = "б/р"; break;
+    //case 0: res = "б/р"; break;
+    case 0: res = ""; break;
     case 1: res = "Iю"; break;
     case 2: res = "IIю"; break;
     case 3: res = "IIIю"; break;

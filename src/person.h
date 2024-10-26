@@ -62,6 +62,7 @@ class person
 {
 public:
     explicit person(int bib);
+    person(st_person& dt);
     person(QJsonObject objJson);
     QJsonObject toJson() const;
 

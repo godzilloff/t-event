@@ -41,6 +41,8 @@ public:
     void updateData(QJsonObject objJson);
     QJsonObject toJson() const;
 
+    ~race();
+
     QString getNameRece(){ return data.title;};
 
     QVector<person*> *getPtrPersons(){ return &persons_;};
@@ -54,6 +56,7 @@ public:
     int getResultMsec(const int number);
 
     int getIndexPerson(int number);
+    void addPerson(QString name, QString id_org, QString id_gr, QString qual,  QString year, QString comment);
 
     const st_person* getDataPersonBib(int number);
     const st_result* getDataResultBib(int number);
@@ -77,8 +80,15 @@ public:
     int clearBibInResult(int cardNum);
     int addResult(int bib, QByteArray ba);
 
-    QString getNameOrganizationFromBib(int number);
+    QString getIdGroupByName(const QString& name);
     QString getNameGroupFromBib(int number);
+    QString addGroupByName(const QString& name);
+
+    QString getIdOrganizationByName(const QString &name);
+    QString getIdOrganizationByNameAndContact(const QString &name,const QString &contact);
+    QString getNameOrganizationFromBib(int number);
+    QString addOrgByName(const QString &name);
+    QString addOrgByNameAndContact(const QString &name,const QString &contact);
 
     QString getNameOrganization(QString id);
     QString getNameGroup(QString id);
@@ -97,7 +107,6 @@ private:
     QVector<person*> persons_;
     QVector<result*> results_;
 
-    QJsonObject objJsonData;
 };
 
 #endif // RACE_H

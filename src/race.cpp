@@ -1,6 +1,14 @@
 #include "race.h"
+#include "functions.h"
 
 race::race(){}
+
+race::~race()
+{
+    for (int ii=0; ii < groups_.size(); ii++)
+        delete groups_[ii];
+}
+
 
 race::race(QJsonObject objJson)
 {
@@ -94,6 +102,43 @@ int race::addResult(int bib, QByteArray ba)
     return 0;
 }
 
+QString race::addGroupByName(const QString &name)
+{
+    QString id = getIdGroupByName(name);
+    if (id == ""){
+        id = QString::number(groups_.size()+1);
+        group* gr = new group(id,name);
+        groups_.push_back(gr);
+    }
+    return id;
+}
+
+QString race::getIdGroupByName(const QString &name)
+{
+    for(group* x: groups_){
+        if (x->getName() == name)
+            return x->getId();
+    }
+    return QString{};
+}
+
+QString race::getIdOrganizationByName(const QString &name)
+{
+    for(organization* x: organizations_){
+        if (x->getName() == name)
+            return x->getId();
+    }
+    return QString{};
+}
+
+QString race::getIdOrganizationByNameAndContact(const QString &name,const QString &contact)
+{
+    for(organization* x: organizations_){
+        if ((x->getName() == name)&&(x->getContact() == contact))
+            return x->getId();
+    }
+    return QString{};
+}
 
 // {
 //     "persons": [
@@ -236,6 +281,21 @@ int race::getIndexPerson(int number)
             return x->getBib();
     }
     return -1;
+}
+
+void race::addPerson(QString name, QString id_org, QString id_gr, QString qual, QString year, QString comment)
+{
+    st_person dt;
+    splitString(name, dt.surname, dt.name);
+    dt.id = QString::number(1000 + persons_.size());
+    dt.organization_id = id_org;
+    dt.group_id = id_gr;
+    dt.year = year.toInt();
+    dt.qual = qual.toInt();
+    dt.comment = dt.comment;
+
+    person* per = new person(dt);
+    persons_.push_back(per);
 }
 
 QString race::getNameFromBib(int number)
@@ -401,6 +461,29 @@ QString race::getNameOrganizationFromBib(int number)
 }
 
 
+QString race::addOrgByName(const QString &name)
+{
+    QString id = getIdGroupByName(name);
+    if (id == ""){
+        id = QString::number(organizations_.size()+1);
+        organization* org = new organization(id, name);
+        organizations_.push_back(org);
+    }
+    return id;
+}
+
+QString race::addOrgByNameAndContact(const QString &name, const QString &contact)
+{
+    QString id = getIdOrganizationByNameAndContact(name, contact);
+    if (id == ""){
+        id = QString::number(organizations_.size()+1);
+        organization* org = new organization(id,name,contact);
+        organizations_.push_back(org);
+    }
+    return id;
+}
+
+
 // QString race::getNameOrganization(QString id)
 // {
 //     QString str_name{};
@@ -433,50 +516,45 @@ QString race::getNameGroupFromBib(int number)
 
 QString race::getNameGroup(QString id)
 {
-    QString str_name = "";
     for(group* x: groups_){
         if (x->getId() == id)
             return x->getName();
     }
-    return str_name;
+    return QString{};
 }
 
 QString race::getNameCourse(QString id)
 {
-    QString str_name = "";
     for(course* x: courses_){
         if (x->getId() == id)
             return x->getName();
     }
-    return str_name;
+    return QString{};
 }
 
 int race::getLengthCourse(QString id)
 {
-    int len = 0;
     for(course* x: courses_){
         if (x->getId() == id)
             return x->getLength();
     }
-    return len;
+    return 0;
 }
 
 int race::getCntKPCourse(QString id)
 {
-    int len = 0;
     for(course* x: courses_){
         if (x->getId() == id)
             return x->getCntControll();
     }
-    return len;
+    return 0;
 }
 
 int race::getClimb(QString id)
 {
-    int len = 0;
     for(course* x: courses_){
         if (x->getId() == id)
             return x->getClimb();
     }
-    return len;
+    return 0;
 }

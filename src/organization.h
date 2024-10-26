@@ -34,6 +34,7 @@ class organization
 {
 public:
     organization();
+    organization(const QString &id, const QString &name, const QString contact = "");
     organization(QJsonObject objJson);
     QJsonObject toJson() const;
 

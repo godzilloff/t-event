@@ -2,6 +2,11 @@
 
 group::group() {}
 
+group::group(QString id, QString name) {
+    data.long_name = data.name = name;
+    data.id = id;
+}
+
 group::group(QJsonObject objJson)
 {
     data.count_finished = objJson.value("count_finished").toInt();

@@ -146,6 +146,7 @@ class group
 {
 public:
     group();
+    group(QString id, QString name);
     group(QJsonObject objJson);
     QJsonObject toJson() const;
 

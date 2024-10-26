@@ -394,6 +394,28 @@ void MainWindow::open_JSON(const QString &path){
     adjustForCurrentFile(path);
 }
 
+
+void MainWindow::on_act_import_csv_orgeo_ru_triggered()
+{
+    ui_log_msg("on_act_import_csv_orgeo_ru_triggered");
+    QString file_name = QFileDialog::getOpenFileName(this, "Импорт заявки", QDir::currentPath(), "*.csv");
+    if (file_name == "") return;
+
+    if (file_name != ""){
+        ui_log_msg(file_name);
+
+        if (pSEvent == nullptr){
+            pSEvent.reset();
+            pSEvent = std::make_shared<QSportEvent>();
+        }
+        pSEvent->importCSV(file_name);
+
+        ui_person->update_sevent(pSEvent);
+        ui_result->update_sevent(pSEvent);
+        update_ui_table();
+    }
+}
+
 void MainWindow::update_ui_table(){
     ui_log_msg("update_ui_table");
 
@@ -452,38 +474,6 @@ void MainWindow::on_act_info_triggered()
 {
     if (!pSEvent->empty()) emit sendDataToDialog(pSEvent->getDataRace());
     ui_info->show();
-}
-
-
-void MainWindow::on_act_import_csv_orgeo_ru_triggered()
-{
-    QString file_name = QFileDialog::getOpenFileName(this, "Импорт заявки", QDir::currentPath(), "*.csv");
-    if (file_name == "") return;
-
-    ui_log_msg(file_name);
-
-    QFile file(file_name);
-    if ( !file.open(QFile::ReadOnly | QFile::Text) ) {
-        qDebug() << "File not exists";
-    } else {
-        // Создаём поток для извлечения данных из файла
-        QTextStream in(&file);
-        in.setEncoding(QStringConverter::LastEncoding);
-        // Считываем данные до конца файла
-        while (!in.atEnd())
-        {
-            // ... построчно
-            QString line = in.readLine();
-            // Добавляем в модель по строке с элементами
-            QList<QStandardItem *> standardItemsList;
-            // учитываем, что строка разделяется точкой с запятой на колонки
-            for (QString item : line.split(';')) {
-                standardItemsList.append(new QStandardItem(item));
-            }
-            csvModel->insertRow(csvModel->rowCount(), standardItemsList);
-        }
-        file.close();
-    }
 }
 
 

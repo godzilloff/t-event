@@ -13,8 +13,12 @@ public:
     explicit QSportEvent(QObject *parent = nullptr);
     ~QSportEvent();
 
+    void addRace();
+
     void importSportorgJSON(const QString& path);
     void exportSportorgJSON(const QString& path);
+
+    void importCSV(const QString& path);
 
     const QString getNameOrganization(const QString& id);
     const QString getNameGroup(const QString& id);
