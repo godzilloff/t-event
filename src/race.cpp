@@ -12,6 +12,10 @@ race::~race()
 
 race::race(QJsonObject objJson)
 {
+    importFromJson(objJson);
+}
+
+void race::importFromJson(QJsonObject objJson){
     QJsonArray jsonArrCourses;
     QJsonArray jsonArrGroup;
     QJsonArray jsonArrOrganization;

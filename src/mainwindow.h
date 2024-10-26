@@ -39,6 +39,8 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+    void createNewSEvent();
+
     void saveSettings();
     void loadSettings();
 

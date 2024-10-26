@@ -11,11 +11,12 @@
 QSportEvent::QSportEvent(QObject *parent)
     : QObject{parent}
 {
-    //qDebug() << "ctor QSportEvent";
+    qDebug() << "ctor QSportEvent";
+    addRace();
 }
 
 QSportEvent::~QSportEvent() {
-    //qDebug() << "dtor QSportEvent";
+    qDebug() << "dtor QSportEvent";
     if (races_.size() > 0) delete races_.at(0);
 }
 
@@ -166,8 +167,12 @@ void QSportEvent::importSportorgJSON(const QString& path){
             qDebug() << "ready import races: " << jsonArr.count();
 
             for (qsizetype ii=0; ii < jsonArr.count(); ii++){
-                race* race_ = new race(jsonArr.at(0).toObject());
-                races_.push_back(race_);
+                if (ii == 0){
+                    races_.at(0)->importFromJson(jsonArr.at(0).toObject());
+                } else{
+                    race* race_ = new race(jsonArr.at(0).toObject());
+                    races_.push_back(race_);
+                }
             }
         }
     }
@@ -199,28 +204,23 @@ void QSportEvent::importCSV(const QString& path){
     if ( !file.open(QFile::ReadOnly | QFile::Text) ) {
         qDebug() << "File not exists";
     } else {
-        addRace();
-        // Создаём поток для извлечения данных из файла
         QTextStream in(&file);
         in.setEncoding(QStringConverter::LastEncoding);
-        // Считываем данные до конца файла
+
         while (!in.atEnd())
         {
-            // ... построчно
             QString line = in.readLine();
-            line = line.trimmed(); // Удаляем пробелы в начале и конце строки
-            // Разделяем строку по разделителю
-            QStringList data = line.split(";");
+            line = line.trimmed(); // delete space
+            QStringList data = line.split(";"); // split string
 
             for (int i = 0; i < data.size(); i++) {
-                // Обработка данных
-                data[i] = data[i].trimmed();
+                data[i] = data[i].trimmed();   // Обработка данных
             }
             QString id_group = races_.at(0)->addGroupByName(data[0]);
             QString id_org = races_.at(0)->addOrgByNameAndContact(data[2],data[3]);
             races_.at(0)->addPerson(data[1], id_org,id_group , data[4], data[6], data[8]);
-            //csvModel->insertRow(csvModel->rowCount(), standardItemsList);
         }
+
         file.close();
     }
 }

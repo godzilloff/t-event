@@ -93,8 +93,31 @@ MainWindow::~MainWindow()
     delete recentFilesMenu;
 }
 
+void MainWindow::createNewSEvent()
+{
+    if (pSEvent != nullptr){
+        QMessageBox msgBox;
+        msgBox.setText("Очистить текущие данные?");
+        msgBox.setInformativeText("Ok - очистить\n Отмена - отменить создание нового соревнования");
+        msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
+        msgBox.setIcon(QMessageBox::Warning);
+        msgBox.setDefaultButton(QMessageBox::Cancel);
+        int change_clear = msgBox.exec();
+        if (change_clear != QMessageBox::Ok)
+            return;
+    }
+
+    pSEvent.reset();
+    pSEvent = std::make_shared<QSportEvent>();
+
+    ui_person->update_sevent(pSEvent);
+    ui_result->update_sevent(pSEvent);
+    update_ui_table();
+}
+
 void MainWindow::initActionsConnections()
 {
+    connect(ui->act_new, &QAction::triggered, this, &MainWindow::createNewSEvent);
     connect(ui->act_connect_comport, &QAction::triggered, this, &MainWindow::openSerialPort);
     connect(ui->act_disconnect_comport, &QAction::triggered, this, &MainWindow::closeSerialPort);
     //connect(ui->actionQuit, &QAction::triggered, this, &MainWindow::close);

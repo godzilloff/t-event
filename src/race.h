@@ -38,6 +38,7 @@ class race
 public:
     race();
     race(QJsonObject objJson);
+    void importFromJson(QJsonObject objJson);
     void updateData(QJsonObject objJson);
     QJsonObject toJson() const;
 
