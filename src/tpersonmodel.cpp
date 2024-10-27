@@ -105,3 +105,10 @@ QVariant TpersonModel::headerData(int section, Qt::Orientation orientation,
   }
   return section + 1;
 }
+
+// ==============
+
+QVariant TPersonProxyModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+    return sourceModel()->headerData(section, orientation, role);
+}

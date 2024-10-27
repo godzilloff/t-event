@@ -36,6 +36,7 @@ MainWindow::MainWindow(QWidget *parent)
     modelOrganization (new TorganizationModel()),
     modelGroup(new TgroupModel()),
     modelResult (new TresultModel()),
+    proxyModelPerson (new TPersonProxyModel(this)),
     proxyModelResult (new TResultProxyModel(this)),
     comport_timer(new QTimer(this)),
 
@@ -59,6 +60,7 @@ MainWindow::MainWindow(QWidget *parent)
     QObject::connect(this, &MainWindow::sendDataPersonToDialog, ui_person, &FormPerson::recieveDataFromMain);
     QObject::connect(this, &MainWindow::sendDataResultToDialog, ui_result, &FormResult::recieveDataFromMain);
 
+    QObject::connect(modelPerson,&QAbstractItemModel::dataChanged,proxyModelPerson,&QSortFilterProxyModel::invalidate);
     QObject::connect(modelResult,&QAbstractItemModel::dataChanged,proxyModelResult,&QSortFilterProxyModel::invalidate);
 
     QObject::connect(comport, &QSerialPort::errorOccurred, this, &MainWindow::handleError);
@@ -87,6 +89,7 @@ MainWindow::~MainWindow()
     delete modelGroup;
     delete modelResult;
 
+    delete proxyModelPerson;
     delete proxyModelResult;
 
     delete fileMenu;
@@ -443,14 +446,6 @@ void MainWindow::on_act_import_csv_orgeo_ru_triggered()
 void MainWindow::update_ui_table(){
     ui_log_msg("update_ui_table");
 
-    //TpersonModel *modelPerson = new TpersonModel();
-    modelPerson->reInit(pSEvent);
-    ui->tablePerson->setSortingEnabled(true);
-    ui->tablePerson->setModel(modelPerson);
-    ui->tablePerson->resizeColumnsToContents();
-    ui->tablePerson->verticalHeader()->setDefaultSectionSize(20);
-    //ui->tablePerson->resizeRowsToContents();
-
     //TcourseModel *modelCourse = new TcourseModel();
     modelCourse->reInit(pSEvent);
     ui->tableDist->setModel(modelCourse);
@@ -469,8 +464,32 @@ void MainWindow::update_ui_table(){
     ui->tableGroup->resizeColumnsToContents();
     ui->tableGroup->verticalHeader()->setDefaultSectionSize(20);
 
-
+    update_ui_person();
     update_ui_result();
+}
+
+void MainWindow::update_ui_person(){
+
+    //TpersonModel *modelPerson = new TpersonModel();
+    modelPerson->reInit(pSEvent);
+    proxyModelPerson->setSourceModel(nullptr);
+    proxyModelPerson->setSourceModel(modelPerson);
+
+    ui->tablePerson->setSortingEnabled(true);
+    ui->tablePerson->setModel(proxyModelPerson);
+    ui->tablePerson->resizeColumnsToContents();
+    ui->tablePerson->verticalHeader()->setDefaultSectionSize(20);
+    //ui->tablePerson->resizeRowsToContents();
+
+    ui->tablePerson->verticalHeader()->setMinimumWidth(25);
+    ui->tablePerson->verticalHeader()->setDefaultAlignment(Qt::AlignCenter);
+    ui->tablePerson->setSortingEnabled(true);
+    ui->tablePerson->sortByColumn(0,Qt::AscendingOrder);
+    ui->tablePerson->resizeColumnsToContents();
+    ui->tablePerson->verticalHeader()->setDefaultSectionSize(20);
+    proxyModelPerson->sort(TpersonModel::ColNumTablePerson::CGroup);
+
+    ui->tablePerson->update();
 }
 
 void MainWindow::update_ui_result(){

@@ -46,6 +46,7 @@ public:
 
     void open_JSON(const QString &path);
     void update_ui_table();
+    void update_ui_person();
     void update_ui_result();
 
 signals:
@@ -122,6 +123,7 @@ private:
     TgroupModel *modelGroup = nullptr;
     TresultModel *modelResult = nullptr;
 
+    TPersonProxyModel* proxyModelPerson = nullptr;
     TResultProxyModel* proxyModelResult = nullptr;
 
     void ui_log_msg(const QString& str);

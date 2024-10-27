@@ -2,6 +2,7 @@
 #define TPERSONMODEL_H
 
 #include <QAbstractItemModel>
+#include <QSortFilterProxyModel>
 #include <QObject>
 
 #include "person.h"
@@ -42,6 +43,25 @@ private:
     QVector<person*> *persons_ = nullptr;
 
 signals:
+};
+
+// ==============
+
+class TPersonProxyModel : public QSortFilterProxyModel
+{
+    Q_OBJECT
+
+public:
+    TPersonProxyModel(QObject *parent = nullptr){};
+
+    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+
+protected:
+           //bool filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const override;
+           //bool lessThan(const QModelIndex &left, const QModelIndex &right) const override;
+
+private:
+
 };
 
 #endif // TPERSONMODEL_H
