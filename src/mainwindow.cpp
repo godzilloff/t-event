@@ -25,12 +25,7 @@
 static constexpr std::chrono::seconds kWriteTimeout = std::chrono::seconds{5};
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), ui(new Ui::MainWindow),
-    ui_info(new FormInfo(this)),
-    ui_person(new FormPerson(this)),
-    ui_result(new FormResult(this)),
-    ui_online(new FormOnline(this)),
-    ui_com_settings(new SettingsDialog(this)),
+    : QMainWindow(parent),
     modelPerson (new TpersonModel()),
     modelCourse (new TcourseModel()),
     modelOrganization (new TorganizationModel()),
@@ -38,16 +33,23 @@ MainWindow::MainWindow(QWidget *parent)
     modelResult (new TresultModel()),
     proxyModelPerson (new TPersonProxyModel(this)),
     proxyModelResult (new TResultProxyModel(this)),
+    ui(new Ui::MainWindow),
+    ui_info(new FormInfo(this)),
+    ui_person(new FormPerson(this)),
+    ui_prepar(new FormPrepar(this)),
+    ui_result(new FormResult(this)),
+    ui_online(new FormOnline(this)),
+    ui_com_settings(new SettingsDialog(this)),
     comport_timer(new QTimer(this)),
 
     comport(new QSerialPort(this)),
     postSender(new PostRequestSender(this)),
     maxFileNr(4)
-
 {
     ui->setupUi(this);
     ui_info->hide();
     ui_person->hide();
+    ui_prepar->hide();
     ui_result->hide();
     ui_online->hide();
 
@@ -79,6 +81,7 @@ MainWindow::~MainWindow()
     delete ui;
     delete ui_info;
     delete ui_person;
+    delete ui_prepar;
     delete ui_result;
     delete comport_timer;
     delete comport;
@@ -94,6 +97,13 @@ MainWindow::~MainWindow()
 
     delete fileMenu;
     delete recentFilesMenu;
+}
+
+void MainWindow::update_ptr()
+{
+    ui_person->update_sevent(pSEvent);
+    ui_prepar->update_sevent(pSEvent);
+    ui_result->update_sevent(pSEvent);
 }
 
 void MainWindow::createNewSEvent()
@@ -113,14 +123,15 @@ void MainWindow::createNewSEvent()
     pSEvent.reset();
     pSEvent = std::make_shared<QSportEvent>();
 
-    ui_person->update_sevent(pSEvent);
-    ui_result->update_sevent(pSEvent);
+
     update_ui_table();
 }
 
 void MainWindow::initActionsConnections()
 {
     connect(ui->act_new, &QAction::triggered, this, &MainWindow::createNewSEvent);
+    connect(ui->act_preparation, &QAction::triggered, this, &MainWindow::onShowPrep);
+
     connect(ui->act_connect_comport, &QAction::triggered, this, &MainWindow::openSerialPort);
     connect(ui->act_disconnect_comport, &QAction::triggered, this, &MainWindow::closeSerialPort);
     //connect(ui->actionQuit, &QAction::triggered, this, &MainWindow::close);
@@ -415,8 +426,7 @@ void MainWindow::open_JSON(const QString &path){
     pSEvent = std::make_shared<QSportEvent>();
     pSEvent->importSportorgJSON(path);
 
-    ui_person->update_sevent(pSEvent);
-    ui_result->update_sevent(pSEvent);
+    update_ptr();
     update_ui_table();
     adjustForCurrentFile(path);
 }
@@ -437,8 +447,7 @@ void MainWindow::on_act_import_csv_orgeo_ru_triggered()
         }
         pSEvent->importCSV(file_name);
 
-        ui_person->update_sevent(pSEvent);
-        ui_result->update_sevent(pSEvent);
+        update_ptr();
         update_ui_table();
     }
 }
@@ -477,10 +486,6 @@ void MainWindow::update_ui_person(){
 
     ui->tablePerson->setSortingEnabled(true);
     ui->tablePerson->setModel(proxyModelPerson);
-    ui->tablePerson->resizeColumnsToContents();
-    ui->tablePerson->verticalHeader()->setDefaultSectionSize(20);
-    //ui->tablePerson->resizeRowsToContents();
-
     ui->tablePerson->verticalHeader()->setMinimumWidth(25);
     ui->tablePerson->verticalHeader()->setDefaultAlignment(Qt::AlignCenter);
     ui->tablePerson->setSortingEnabled(true);
@@ -517,6 +522,12 @@ void MainWindow::on_act_info_triggered()
 {
     if (!pSEvent->empty()) emit sendDataToDialog(pSEvent->getDataRace());
     ui_info->show();
+}
+
+
+void MainWindow::onShowPrep()
+{
+    ui_prepar->show();
 }
 
 

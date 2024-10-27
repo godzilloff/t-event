@@ -11,6 +11,7 @@
 #include "qsportevent.h"
 #include "forminfo.h"
 #include "formperson.h"
+#include "formprepar.h"
 #include "formresult.h"
 #include "formonline.h"
 #include "settingsdialog.h"
@@ -48,6 +49,16 @@ public:
     void update_ui_table();
     void update_ui_person();
     void update_ui_result();
+    void update_ptr();
+
+    TpersonModel *modelPerson = nullptr;
+    TcourseModel *modelCourse = nullptr;
+    TorganizationModel *modelOrganization = nullptr;
+    TgroupModel *modelGroup = nullptr;
+    TresultModel *modelResult = nullptr;
+
+    TPersonProxyModel* proxyModelPerson = nullptr;
+    TResultProxyModel* proxyModelResult = nullptr;
 
 signals:
     void sendDataToDialog(const st_race& data_);
@@ -75,6 +86,7 @@ private slots:
     void on_act_open_triggered();
 
     void openRecent();
+    void onShowPrep();
 
     void on_act_Sportorg_JSON_triggered();
     void on_act_info_triggered();
@@ -107,6 +119,7 @@ private:
 
     FormInfo* ui_info = nullptr;
     FormPerson* ui_person = nullptr;
+    FormPrepar* ui_prepar = nullptr;
     FormResult* ui_result = nullptr;
     FormOnline* ui_online = nullptr;
     SettingsDialog* ui_com_settings = nullptr;
@@ -116,15 +129,6 @@ private:
 
     bool fl_connectedComport = false;
     SettingsDialog::Settings settingsComport;
-
-    TpersonModel *modelPerson = nullptr;
-    TcourseModel *modelCourse = nullptr;
-    TorganizationModel *modelOrganization = nullptr;
-    TgroupModel *modelGroup = nullptr;
-    TresultModel *modelResult = nullptr;
-
-    TPersonProxyModel* proxyModelPerson = nullptr;
-    TResultProxyModel* proxyModelResult = nullptr;
 
     void ui_log_msg(const QString& str);
 

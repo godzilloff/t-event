@@ -158,6 +158,7 @@
     <property name="title">
      <string>Подготовка к старту</string>
     </property>
+    <addaction name="act_preparation"/>
    </widget>
    <widget class="QMenu" name="menu_6">
     <property name="title">
@@ -398,6 +399,11 @@
   <action name="act_online">
    <property name="text">
     <string>Online</string>
+   </property>
+  </action>
+  <action name="act_preparation">
+   <property name="text">
+    <string>Подготовка к старту</string>
    </property>
   </action>
  </widget>

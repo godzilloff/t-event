@@ -442,6 +442,17 @@ int race::setCardNumFromBib(int bib, int cardNum)
     return -1;
 }
 
+int race::setBibFromId(QString id, int bib)
+{
+    for(person* x: persons_){
+        if (x->getId() == id){
+            x->setBib(bib);
+            return 0;
+        }
+    }
+    return -1;
+}
+
 int race::setBibFromCardNum(int cardNum, int bib)
 {
     for(result* x: results_){

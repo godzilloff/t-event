@@ -141,6 +141,7 @@ public:
     int setCardNum(int cardNum);
 
     int getBib(){ return data.bib;};
+    void setBib(int bib){data.bib = bib;};
     QString getName(){ return data.name;};
     QString getSurname(){ return data.surname;};
     QString getFullName(){ return data.name + " " + data.surname;};
