@@ -106,6 +106,12 @@ void MainWindow::update_ptr()
     ui_result->update_sevent(pSEvent);
 }
 
+void MainWindow::update_table()
+{
+    ui->tablePerson->update();
+    ui->tableResult->update();
+}
+
 void MainWindow::createNewSEvent()
 {
     if (pSEvent != nullptr){

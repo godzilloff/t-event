@@ -25,6 +25,8 @@ private:
     std::shared_ptr<QSportEvent> ptrSEvent;
 
     void onSetBib();
+    void onClearAllCardNum();
+    void onSetCardNum();
 
 };
 

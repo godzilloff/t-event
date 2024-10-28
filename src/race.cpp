@@ -1,6 +1,8 @@
 #include "race.h"
 #include "functions.h"
 
+#include <QFile>
+
 race::race(){}
 
 race::~race()
@@ -424,6 +426,13 @@ int race::getBibFromCardNum(int cardNum)
     return -1;
 }
 
+void race::clearAllCardNum()
+{
+    for(person* x: persons_){
+        x->clearCardNum();
+    }
+}
+
 int race::getCardNumFromBib(int bib)
 {
     for(person* x: persons_){
@@ -440,6 +449,36 @@ int race::setCardNumFromBib(int bib, int cardNum)
             return x->setCardNum(cardNum);
     }
     return -1;
+}
+
+
+int race::setCardNumFromCsv(QString path)
+{
+    QFile file(path);
+    if ( !file.open(QFile::ReadOnly | QFile::Text) ) {
+        qDebug() << "File not exists";
+    } else {
+        QTextStream in(&file);
+        in.setEncoding(QStringConverter::LastEncoding);
+
+        while (!in.atEnd())
+        {
+            QString line = in.readLine();
+            line = line.trimmed(); // delete space
+            QStringList data = line.split(";"); // split string
+
+            for (int i = 0; i < data.size(); i++) {
+                data[i] = data[i].trimmed();   // Обработка данных
+            }
+            int bib = data[0].toInt();
+            int cardNum = data[1].toInt();
+            setCardNumFromBib(bib, cardNum);
+        }
+
+        file.close();
+    }
+
+    return 0;
 }
 
 int race::setBibFromId(QString id, int bib)

@@ -50,6 +50,7 @@ public:
     void update_ui_person();
     void update_ui_result();
     void update_ptr();
+    void update_table();
 
     TpersonModel *modelPerson = nullptr;
     TcourseModel *modelCourse = nullptr;
@@ -59,6 +60,8 @@ public:
 
     TPersonProxyModel* proxyModelPerson = nullptr;
     TResultProxyModel* proxyModelResult = nullptr;
+
+    void ui_log_msg(const QString& str);
 
 signals:
     void sendDataToDialog(const st_race& data_);
@@ -129,8 +132,6 @@ private:
 
     bool fl_connectedComport = false;
     SettingsDialog::Settings settingsComport;
-
-    void ui_log_msg(const QString& str);
 
     QByteArray dataFromComport;
     qint64 m_bytesToWrite = 0;

@@ -138,15 +138,18 @@ public:
 
     bool operator==(const person & obj){return this->data.bib == obj.data.bib; };
 
-    int setCardNum(int cardNum);
-
     int getBib(){ return data.bib;};
     void setBib(int bib){data.bib = bib;};
+    void clearBib(){data.bib = 0;};
+
+    int getCardNumber(){ return data.card_number;};
+    int setCardNum(int cardNum);
+    void clearCardNum(){data.card_number = 0;};
+
     QString getName(){ return data.name;};
     QString getSurname(){ return data.surname;};
     QString getFullName(){ return data.name + " " + data.surname;};
     int getSex(){ return data.sex;};
-    int getCardNumber(){ return data.card_number;};
     int getYear(){ return data.year;};
     int getStartTime(){ return data.start_time;};
     QString getQual(){ return getQ(data.qual);};
