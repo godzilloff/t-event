@@ -2,6 +2,7 @@
 #include "functions.h"
 
 #include <QFile>
+#include <QDir>
 
 race::race(){}
 
@@ -104,6 +105,7 @@ int race::addResult(int bib, QByteArray ba)
 
     // */
     result* result_ = new result(json);
+    result_->addBackup(QDir::currentPath() + "/backup/log.txt");
     results_.push_back(result_);
     return 0;
 }

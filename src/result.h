@@ -106,6 +106,9 @@ public:
 
     const st_result* getDataResult(){ return &data;};
 
+    QString getStrBackupResult();
+    void addBackup(const QString &path);
+
     //void setItPerson(QVector<person*>::Iterator it_){it = it_;};
 
 private:

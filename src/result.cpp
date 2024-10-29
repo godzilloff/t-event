@@ -1,4 +1,7 @@
 #include "result.h"
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
 
 result::result() {}
 
@@ -78,4 +81,38 @@ QJsonObject result::toJson() const
     //json[""] = ;
 
     return json;
+}
+
+QString result::getStrBackupResult()
+{
+    return QDateTime::currentDateTime().toString("yyyy.MM.dd;HH:mm:ss;") +
+           QString::number(data.card_number) + ";" +
+           QTime::fromMSecsSinceStartOfDay(data.start_msec).toString("hh:mm:ss,z;")+
+           QTime::fromMSecsSinceStartOfDay(data.finish_msec).toString("hh:mm:ss,z;")+
+           QTime::fromMSecsSinceStartOfDay(data.result_msec).toString("hh:mm:ss,z;");
+}
+
+void result::addBackup(const QString &path)
+{
+    QFileInfo fileInfo(path);
+    QString dirpath = fileInfo.absoluteDir().path();
+    QDir dir(dirpath);
+    if (!dir.exists()) {
+        if (!dir.mkdir(dirpath)) {
+            // Ошибка создания директории
+            qDebug() << "Ошибка создания директории:" << path;
+            return;
+        }
+    }
+
+    QFile file(path);
+
+    if(!file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Append)){
+        return;
+    }
+
+    QTextStream stream(&file);
+    stream << getStrBackupResult() << Qt::endl;
+    file.close();
+    return;
 }
