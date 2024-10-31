@@ -11,6 +11,7 @@
 #include "organization.h"
 #include "person.h"
 #include "result.h"
+#include "racesettings.h"
 
 //-- данные / "data": {}
 //-- дистанции / courses []
@@ -105,6 +106,7 @@ public:
 
 private:
     st_race data;
+    RaceSettings raceSettings;
 
     QVector<course*> courses_;
     QVector<group*> groups_;

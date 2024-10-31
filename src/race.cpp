@@ -26,6 +26,7 @@ void race::importFromJson(QJsonObject objJson){
     QJsonArray jsonArrResult;
 
     updateData(objJson.value("data").toObject());
+    raceSettings.importFromJson(objJson.value("settings").toObject());
 
     jsonArrCourses = objJson.value("courses").toArray();
     for(int ii = 0; ii < jsonArrCourses.count(); ii++){
@@ -260,6 +261,8 @@ QJsonObject race::toJson() const
     for (const result *v : results_)
         resultArray.append(v->toJson());
     json["results"] = resultArray;
+
+    json["settings"] = raceSettings.toJson();
 
     return json;
 }
