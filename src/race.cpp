@@ -111,6 +111,26 @@ int race::addResult(int bib, QByteArray ba)
     return 0;
 }
 
+QString race::getOnlineUrl()
+{
+    return raceSettings.getOnlineUrl();
+}
+
+bool race::getOnlineEnable()
+{
+    return raceSettings.getOnlineEnable();
+}
+
+void race::setOnlineUrl(const QString &url)
+{
+    raceSettings.setOnlineUrl(url);
+}
+
+void race::setOnlineEnable(bool status)
+{
+    raceSettings.setOnlineEnable(status);
+}
+
 QString race::addGroupByName(const QString &name)
 {
     QString id = getIdGroupByName(name);

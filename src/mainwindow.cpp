@@ -61,6 +61,7 @@ MainWindow::MainWindow(QWidget *parent)
     QObject::connect(this, &MainWindow::sendDataToDialog, ui_info, &FormInfo::recieveDataFromMain);
     QObject::connect(this, &MainWindow::sendDataPersonToDialog, ui_person, &FormPerson::recieveDataFromMain);
     QObject::connect(this, &MainWindow::sendDataResultToDialog, ui_result, &FormResult::recieveDataFromMain);
+    QObject::connect(this, &MainWindow::sendDataOnlineToDialog, ui_online, &FormOnline::recieveDataFromMain);
 
     QObject::connect(modelPerson,&QAbstractItemModel::dataChanged,proxyModelPerson,&QSortFilterProxyModel::invalidate);
     QObject::connect(modelResult,&QAbstractItemModel::dataChanged,proxyModelResult,&QSortFilterProxyModel::invalidate);
@@ -104,6 +105,7 @@ void MainWindow::update_ptr()
     ui_person->update_sevent(pSEvent);
     ui_prepar->update_sevent(pSEvent);
     ui_result->update_sevent(pSEvent);
+    ui_online->update_sevent(pSEvent);
 }
 
 void MainWindow::update_table()
@@ -561,13 +563,14 @@ void MainWindow::requestOnline(const QString &number)
     QJsonObject bodyrequest;
     persons.append(requestResultBody);
     bodyrequest["persons"] = persons;
-    settingsOnline = ui_online->settings();
-    postSender->sendRequest(this->settingsOnline.url,bodyrequest);
+    postSender->sendRequest(pSEvent->getOnlineUrl(),bodyrequest);
+    //settingsOnline = ui_online->settings();
+    //postSender->sendRequest(this->settingsOnline.url,bodyrequest);
 }
-
 
 void MainWindow::on_act_online_triggered()
 {
+    emit sendDataOnlineToDialog();
     ui_online->show();
 }
 

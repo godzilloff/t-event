@@ -7,13 +7,7 @@ FormOnline::FormOnline(QWidget *parent)
     : QDialog(parent), ui(new Ui::FormOnline)
 {
     ui->setupUi(this);
-
-    //connect(ui->buttonBox, &QPushButton::clicked,
-    //        this, &SettingsDialog::apply);
-
-    connect(ui->buttonBox, &QDialogButtonBox::accepted, this, &FormOnline::apply);
-
-    loadSettingsFromIni();
+    connect(ui->buttonBox, &QDialogButtonBox::accepted, this, &FormOnline::onAccepted);
 }
 
 FormOnline::~FormOnline()
@@ -21,45 +15,19 @@ FormOnline::~FormOnline()
     delete ui;
 }
 
-FormOnline::Settings FormOnline::settings() const
+void FormOnline::update_sevent(std::shared_ptr<QSportEvent> &pSEvent)
 {
-    return m_currentSettings;
+    ptrSEvent = pSEvent;
 }
 
-
-void FormOnline::loadSettingsFromIni(){
-    QSettings settings("set.ini", QSettings::IniFormat);
-    settings.beginGroup("online");
-
-    m_currentSettings.url = settings.value("url", QByteArray()).toString();
-    m_currentSettings.onlineEnabled = settings.value("enable", QByteArray()).toBool();
-
-    ui->ed_url->setText(m_currentSettings.url);
-    ui->chbox_enable_online->setChecked(m_currentSettings.onlineEnabled);
-
-    settings.endGroup();
-}
-
-void FormOnline::saveSettingsFromIni()
+void FormOnline::recieveDataFromMain()
 {
-    QSettings settings("set.ini", QSettings::IniFormat);
-    settings.beginGroup("online");
-    settings.setValue("url", m_currentSettings.url);
-    settings.setValue("enable",m_currentSettings.onlineEnabled);
-    settings.endGroup();
+    ui->ed_url->setText(ptrSEvent->getOnlineUrl());
+    ui->chbox_enable_online->setChecked(ptrSEvent->getOnlineEnable());
 }
 
-void FormOnline::apply()
+void FormOnline::onAccepted()
 {
-    updateSettings();
-    saveSettingsFromIni();
-    hide();
+    ptrSEvent->setOnlineEnable(ui->chbox_enable_online->isChecked());
+    ptrSEvent->setOnlineUrl(ui->ed_url->text());
 }
-
-void FormOnline::updateSettings()
-{
-    m_currentSettings.url = ui->ed_url->text();
-    m_currentSettings.onlineEnabled = ui->chbox_enable_online->isChecked();
-}
-
-

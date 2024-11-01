@@ -3,6 +3,8 @@
 
 #include <QDialog>
 
+#include "qsportevent.h"
+
 namespace Ui {
 class FormOnline;
 }
@@ -12,26 +14,19 @@ class FormOnline : public QDialog
     Q_OBJECT
 
 public:
-    struct Settings {
-        QString url;
-        bool onlineEnabled = false;
-    };
-
     explicit FormOnline(QWidget *parent = nullptr);
     ~FormOnline();
 
-    Settings settings() const;
+    void update_sevent(std::shared_ptr<QSportEvent> &pSEvent);
 
-private slots:
-    void apply();
+public slots:
+    void recieveDataFromMain();
 
 private:
-    void updateSettings();
-    void loadSettingsFromIni();
-    void saveSettingsFromIni();
-
     Ui::FormOnline *ui;
-    Settings m_currentSettings;
+    std::shared_ptr<QSportEvent> ptrSEvent;
+
+    void onAccepted();
 };
 
 #endif // FORMONLINE_H

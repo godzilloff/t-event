@@ -67,6 +67,7 @@ signals:
     void sendDataToDialog(const st_race& data_);
     void sendDataPersonToDialog(const st_person* data_);
     void sendDataResultToDialog(const st_result* data_);
+    void sendDataOnlineToDialog();
 
 
 protected:
@@ -126,9 +127,6 @@ private:
     FormResult* ui_result = nullptr;
     FormOnline* ui_online = nullptr;
     SettingsDialog* ui_com_settings = nullptr;
-
-    bool fl_onlineenabled = false;
-    FormOnline::Settings settingsOnline;
 
     bool fl_connectedComport = false;
     SettingsDialog::Settings settingsComport;

@@ -145,6 +145,26 @@ int QSportEvent::addResult(int bib, QByteArray ba)
     return races_.at(0)->addResult(bib, ba);
 }
 
+QString QSportEvent::getOnlineUrl()
+{
+    return races_.at(0)->getOnlineUrl();
+}
+
+bool QSportEvent::getOnlineEnable()
+{
+    return races_.at(0)->getOnlineEnable();
+}
+
+void QSportEvent::setOnlineUrl(const QString &url)
+{
+    races_.at(0)->setOnlineUrl(url);
+}
+
+void QSportEvent::setOnlineEnable(bool status)
+{
+    races_.at(0)->setOnlineEnable(status);
+}
+
 QJsonObject QSportEvent::toJson() const{
     QJsonObject json;
     json["version"] = "0.5.0.0";

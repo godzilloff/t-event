@@ -13,6 +13,11 @@ public:
     void importFromJson(QJsonObject objJson);
     QJsonObject toJson() const;
 
+    QString getOnlineUrl();
+    bool getOnlineEnable();
+    void setOnlineUrl(const QString &url);
+    void setOnlineEnable(bool status);
+
 private:
     bool is_corridor_minute_number = false;
     bool is_corridor_order_number = false;

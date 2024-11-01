@@ -86,6 +86,11 @@ public:
     int clearBibInResult(int cardNum);
     int addResult(int bib, QByteArray ba);
 
+    QString getOnlineUrl();
+    bool getOnlineEnable();
+    void setOnlineUrl(const QString &url);
+    void setOnlineEnable(bool status);
+
     QString getIdGroupByName(const QString& name);
     QString getNameGroupFromBib(int number);
     QString addGroupByName(const QString& name);

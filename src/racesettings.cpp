@@ -43,7 +43,7 @@ void RaceSettings::importFromJson(QJsonObject objJson)
     if (const QJsonValue v = objJson["is_start_preparation_time"]; v.isBool() )
         is_start_preparation_time = v.toBool();
 
-    if (const QJsonValue v = objJson["live_cp_code"]; v.isBool() )
+    if (const QJsonValue v = objJson["live_cp_code"]; v.isString() )
         live_cp_code = v.toString(); // QString
 
     if (const QJsonValue v = objJson["live_cp_enabled"]; v.isBool() )
@@ -52,7 +52,7 @@ void RaceSettings::importFromJson(QJsonObject objJson)
     if (const QJsonValue v = objJson["live_cp_finish_enabled"]; v.isBool() )
         live_cp_finish_enabled = v.toBool();
 
-    if (const QJsonValue v = objJson["live_cp_split_codes"]; v.isBool() )
+    if (const QJsonValue v = objJson["live_cp_split_codes"]; v.isString() )
         live_cp_split_codes =  v.toString();//"91,91,92"; // QString
 
     if (const QJsonValue v = objJson["live_cp_splits_enabled"]; v.isBool() )
@@ -79,7 +79,7 @@ void RaceSettings::importFromJson(QJsonObject objJson)
     if (const QJsonValue v = objJson["reserve_percent"]; v.isBool() )
         reserve_percent = v.toInt();
 
-    if (const QJsonValue v = objJson["reserve_prefix"]; v.isBool() )
+    if (const QJsonValue v = objJson["reserve_prefix"]; v.isString() )
         reserve_prefix =  v.toString(); // QString
 
     if (const QJsonValue v = objJson["start_first_time"]; v.isBool() )
@@ -91,16 +91,16 @@ void RaceSettings::importFromJson(QJsonObject objJson)
     if (const QJsonValue v = objJson["start_one_minute_qty"]; v.isBool() )
         start_one_minute_qty = v.toInt();
 
-    if (const QJsonValue v = objJson["teamwork_host"]; v.isBool() )
+    if (const QJsonValue v = objJson["teamwork_host"]; v.isString() )
         teamwork_host =  v.toString();//"192.168.1.2"; // QString
 
     if (const QJsonValue v = objJson["teamwork_port"]; v.isBool() )
         teamwork_port = v.toInt();
 
-    if (const QJsonValue v = objJson["teamwork_token"]; v.isBool() )
+    if (const QJsonValue v = objJson["teamwork_token"]; v.isString() )
         teamwork_token =  v.toString();//"4d647db7"; // QString
 
-    if (const QJsonValue v = objJson["teamwork_type_connection"]; v.isBool() )
+    if (const QJsonValue v = objJson["teamwork_type_connection"]; v.isString() )
         teamwork_type_connection =  v.toString();//"client"; // QString
 
     if (const QJsonValue v = objJson["live_urls"]; v.isArray()) {
@@ -155,4 +155,27 @@ QJsonObject RaceSettings::toJson() const
     json["live_urls"] = live_urls_ar;
 
     return json;
+}
+
+QString RaceSettings::getOnlineUrl()
+{
+    if (live_urls.size() > 0)
+        return live_urls.at(0);
+    else return QString{};
+}
+
+void RaceSettings::setOnlineUrl(const QString &url)
+{
+    if (live_urls.size() > 0) live_urls[0] = url;
+    else live_urls.push_back(url);
+}
+
+void RaceSettings::setOnlineEnable(bool status)
+{
+    live_enabled = status;
+}
+
+bool RaceSettings::getOnlineEnable()
+{
+    return live_enabled;
 }

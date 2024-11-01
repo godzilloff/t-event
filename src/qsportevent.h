@@ -44,6 +44,11 @@ public:
     int clearBibInResult(int cardNum);
     int addResult(int bib, QByteArray ba);
 
+    QString getOnlineUrl();
+    bool getOnlineEnable();
+    void setOnlineUrl(const QString &url);
+    void setOnlineEnable(bool status);
+
     QString getNameEvent(){ return races_.at(0)->getNameRece();};
     QVector<race*> getRaces(){return races_;};
     const st_race& getDataRace(){return races_.at(0)->getDataRace();};
