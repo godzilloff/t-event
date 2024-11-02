@@ -457,6 +457,7 @@ void MainWindow::on_act_import_csv_orgeo_ru_triggered()
 
         update_ptr();
         update_ui_table();
+        needSave();
     }
 }
 
@@ -528,8 +529,10 @@ void MainWindow::update_ui_result(){
 
 void MainWindow::on_act_info_triggered()
 {
-    if (!pSEvent->empty()) emit sendDataToDialog(pSEvent->getDataRace());
-    ui_info->show();
+    if (pSEvent){
+        if (!pSEvent->empty()) emit sendDataToDialog(pSEvent->getDataRace());
+        ui_info->show();
+    }
 }
 
 
@@ -575,6 +578,17 @@ void MainWindow::on_act_online_triggered()
 }
 
 
+void MainWindow::on_act_save_triggered()
+{
+    if ((!currentFilePath.isEmpty()) && (QFile(currentFilePath).exists())){
+        ui_log_msg("Save file");
+        ui_log_msg(currentFilePath);
+        pSEvent->exportSportorgJSON(currentFilePath);
+    }
+    else
+        on_act_save_as_triggered();
+}
+
 void MainWindow::on_act_save_as_triggered()
 {
     QString file_name = QFileDialog::getSaveFileName(this, "Создать файл T-Event", QDir::currentPath(), "*.json");
@@ -583,6 +597,7 @@ void MainWindow::on_act_save_as_triggered()
     ui_log_msg("Save as file");
     ui_log_msg(file_name);
     pSEvent->exportSportorgJSON(file_name);
+    adjustForCurrentFile(file_name);
 }
 
 void MainWindow::onTablePerson_dblclk(const QModelIndex &index){

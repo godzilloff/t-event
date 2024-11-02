@@ -49,12 +49,25 @@ void MainWindow::adjustForCurrentFile(const QString &filePath){
 
     // see note
     updateRecentActionList();
+    notNeedSave();
+    //updateWindowTitle();
+}
+
+void MainWindow::needSave(){
+    flag_need_save = true;
+    updateWindowTitle();
+}
+
+void MainWindow::notNeedSave(){
+    flag_need_save = false;
     updateWindowTitle();
 }
 
 void MainWindow::updateWindowTitle(){
-    QString title = pSEvent->getNameEvent() + " ["+currentFilePath+"]" + " - T-Event 0.5.1";
-    this->setWindowTitle(title);
+    QString ch_need_save = (flag_need_save)? "*" : "";
+    QString path = (!currentFilePath.isEmpty()) ? currentFilePath : " ... ";
+    QString title = pSEvent->getNameEvent() + QString{" ["}+path+ch_need_save+QString{"] - T-Event 0.5.1"};
+    this->setWindowTitle(title.trimmed());
 }
 
 void MainWindow::updateRecentActionList(){

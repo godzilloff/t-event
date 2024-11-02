@@ -112,6 +112,8 @@ private slots:
     void onTablePerson_dblclk(const QModelIndex &index);
     void onTableResult_dblclk(const QModelIndex &index);
 
+    void on_act_save_triggered();
+
 private:
     void initActionsConnections();
     void showStatusMessage(const QString &message);
@@ -144,6 +146,7 @@ private:
     QList<QAction*> recentFileActionList;
 
     QString currentFilePath;
+    bool flag_need_save = false;
 
     void createActionsAndConnections();
     void createMenus();
@@ -151,5 +154,7 @@ private:
     void adjustForCurrentFile(const QString& filePath);
     void updateRecentActionList();
     void updateWindowTitle();
+    void needSave();
+    void notNeedSave();
 };
 #endif // MAINWINDOW_H
