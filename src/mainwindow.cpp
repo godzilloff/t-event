@@ -34,6 +34,8 @@ MainWindow::MainWindow(QWidget *parent)
     proxyModelPerson (new TPersonProxyModel(this)),
     proxyModelResult (new TResultProxyModel(this)),
     ui(new Ui::MainWindow),
+    statusbar_msg(new QLabel),
+    clock_time(new QLabel),
     ui_info(new FormInfo(this)),
     ui_person(new FormPerson(this)),
     ui_prepar(new FormPrepar(this)),
@@ -41,6 +43,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui_online(new FormOnline(this)),
     ui_com_settings(new SettingsDialog(this)),
     comport_timer(new QTimer(this)),
+    clock_timer(new QTimer(this)),
 
     comport(new QSerialPort(this)),
     postSender(new PostRequestSender(this)),
@@ -52,6 +55,12 @@ MainWindow::MainWindow(QWidget *parent)
     ui_prepar->hide();
     ui_result->hide();
     ui_online->hide();
+
+    ui->statusbar->addWidget(statusbar_msg, 1);
+    ui->statusbar->addPermanentWidget(clock_time, 0);
+    clock_timer->setInterval(1000);
+    QObject::connect(clock_timer, &QTimer::timeout,this, &MainWindow::updateTime);
+    clock_timer->start();
 
     initActionsConnections();
 
@@ -112,6 +121,12 @@ void MainWindow::update_table()
 {
     ui->tablePerson->update();
     ui->tableResult->update();
+}
+
+void MainWindow::updateTime()
+{
+    QString timeStr = QTime::currentTime().toString("HH:mm:ss");
+    clock_time->setText(timeStr);
 }
 
 void MainWindow::createNewSEvent()
@@ -320,7 +335,7 @@ void MainWindow::handleWriteTimeout()
 
 void MainWindow::showStatusMessage(const QString &message)
 {
-    ui->statusbar->showMessage(message);
+    statusbar_msg->setText(message);
     ui_log_msg(message);
 }
 

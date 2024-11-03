@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <QMenuBar>
 #include <QMenu>
+#include <QLabel>
 
 #include <QStandardItemModel>
 #include <QSortFilterProxyModel>
@@ -113,6 +114,7 @@ private slots:
     void onTableResult_dblclk(const QModelIndex &index);
 
     void on_act_save_triggered();
+    void updateTime();
 
 private:
     void initActionsConnections();
@@ -121,6 +123,8 @@ private:
 
 private:
     Ui::MainWindow *ui;
+    QLabel *statusbar_msg = nullptr;
+    QLabel *clock_time = nullptr;
     std::shared_ptr<QSportEvent> pSEvent;
 
     FormInfo* ui_info = nullptr;
@@ -136,6 +140,7 @@ private:
     QByteArray dataFromComport;
     qint64 m_bytesToWrite = 0;
     QTimer *comport_timer = nullptr;
+    QTimer *clock_timer = nullptr;
 
     QSerialPort *comport = nullptr;
     PostRequestSender *postSender = nullptr;
