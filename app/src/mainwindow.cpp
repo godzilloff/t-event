@@ -373,6 +373,19 @@ void MainWindow::loadSettings()
 
 void MainWindow::closeEvent(QCloseEvent *e)
 {
+    if (flag_need_save){
+        QMessageBox::StandardButton button =
+            QMessageBox::question(this,
+                "Подтверждение закрытия",
+                "Вы уверены, что хотите закрыть программу?",
+                QMessageBox::Yes | QMessageBox::No);
+        if (button == QMessageBox::No) {
+            e->ignore();
+            return;
+        }
+    }
+
+    // программа закрывается
     saveSettings();
     QMainWindow::closeEvent(e);
 }
