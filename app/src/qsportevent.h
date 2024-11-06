@@ -35,8 +35,11 @@ public:
     const QString getPersonInfoFromCardNum(int cardNum);
     const QString getResultFromBib(int bib);
     const int getBibFromCardNum(int cardNum);
+    void setPNameFromId(const QString &id, const QString &name);
+    void setPSurnameFromId(const QString &id, const QString &surname);
     int getCardNumFromBib(int bib);
     int setCardNumFromBib(int bib, int cardNum);
+    int setCardNumFromId(const QString &id, int cardNum);
     int setCardNumFromCsv(QString path);
     void clearAllCardNum();
     int setBibFromId(QString id, int bib);

@@ -31,6 +31,7 @@ private:
     Ui::FormPerson *ui;
 
     std::shared_ptr<QSportEvent> ptrSEvent;
+    QString id;
 
     void update_organization();
     void update_group();

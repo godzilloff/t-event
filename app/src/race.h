@@ -78,8 +78,11 @@ public:
     const QString getResultFromBib(int bib);
     int getBibFromCardNum(int cardNum);
     void clearAllCardNum();
+    void setPNameFromId(const QString &id, const QString &name);
+    void setPSurnameFromId(const QString &id, const QString &surname);
     int getCardNumFromBib(int bib);
     int setCardNumFromBib(int bib, int cardNum);
+    int setCardNumFromId(const QString &id, int cardNum);
     int setCardNumFromCsv(QString path);
     int setBibFromId(QString id, int bib);
     int setBibFromCardNum(int cardNum, int bib);

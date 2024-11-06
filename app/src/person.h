@@ -149,6 +149,10 @@ public:
     QString getName(){ return data.name;};
     QString getSurname(){ return data.surname;};
     QString getFullName(){ return data.name + " " + data.surname;};
+    void setName(const QString &name){ data.name = name;};
+    void setSurname(const QString &surname){ data.surname = surname;};
+
+
     int getSex(){ return data.sex;};
     int getYear(){ return data.year;};
     int getStartTime(){ return data.start_time;};

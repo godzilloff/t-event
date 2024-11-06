@@ -29,6 +29,7 @@ void FormPerson::update_sevent(std::shared_ptr<QSportEvent> &pSEvent)
 
 void FormPerson::recieveDataFromMain(const st_person* data_)
 {
+    id = data_->id;
     QTime time = QTime::fromMSecsSinceStartOfDay(data_->start_time);
     QDate birth_date_d = QDate::fromString(data_->birth_date, "yyyy-MM-dd");
 
@@ -64,10 +65,12 @@ void FormPerson::onCheck_numCard(const QString &text)
 
 void FormPerson::onAccepted()
 {
-    qDebug() << "Person ok";
-    ptrSEvent->setCardNumFromBib(
-        ui->ed_bib->text().toInt(),
-        ui->ed_cardNum->text().toInt());
+    //qDebug() << "Person ok";
+    ptrSEvent->setCardNumFromId(id,ui->ed_cardNum->text().toInt());
+    ptrSEvent->setPNameFromId(id,ui->ed_name->text());
+    ptrSEvent->setPSurnameFromId(id,ui->ed_surname->text());
+    ptrSEvent->setBibFromId(id,ui->ed_bib->text().toInt());
+    ptrSEvent->setBibFromId(id,ui->ed_bib->text().toInt());
 }
 
 void FormPerson::update_organization()

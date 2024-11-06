@@ -105,6 +105,17 @@ const int QSportEvent::getBibFromCardNum(int cardNum)
     return races_.at(0)->getBibFromCardNum(cardNum);
 }
 
+
+void QSportEvent::setPNameFromId(const QString &id, const QString &name)
+{
+    races_.at(0)->setPNameFromId(id, name);
+}
+
+void QSportEvent::setPSurnameFromId(const QString &id, const QString &surname)
+{
+    races_.at(0)->setPSurnameFromId(id, surname);
+}
+
 int QSportEvent::getCardNumFromBib(int bib)
 {
     return races_.at(0)->getCardNumFromBib(bib);
@@ -113,6 +124,11 @@ int QSportEvent::getCardNumFromBib(int bib)
 int QSportEvent::setCardNumFromBib(int bib, int cardNum)
 {
     return races_.at(0)->setCardNumFromBib(bib, cardNum);
+}
+
+int QSportEvent::setCardNumFromId(const QString &id, int cardNum)
+{
+    return races_.at(0)->setCardNumFromId(id, cardNum);
 }
 
 int QSportEvent::setCardNumFromCsv(QString path)

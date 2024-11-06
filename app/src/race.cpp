@@ -458,6 +458,26 @@ void race::clearAllCardNum()
     }
 }
 
+void race::setPNameFromId(const QString &id, const QString &name)
+{
+    for(person* x: persons_){
+        if (x->getId() == id){
+            x->setName(name);
+            return;
+        }
+    }
+}
+
+void race::setPSurnameFromId(const QString &id, const QString &surname)
+{
+    for(person* x: persons_){
+        if (x->getId() == id){
+            x->setSurname(surname);
+            return;
+        }
+    }
+}
+
 int race::getCardNumFromBib(int bib)
 {
     for(person* x: persons_){
@@ -472,6 +492,16 @@ int race::setCardNumFromBib(int bib, int cardNum)
     for(person* x: persons_){
         if (x->getBib() == bib)
             return x->setCardNum(cardNum);
+    }
+    return -1;
+}
+
+int race::setCardNumFromId(const QString &id, int cardNum)
+{
+    for(person* x: persons_){
+        if (x->getId() == id){
+            return x->setCardNum(cardNum);
+        }
     }
     return -1;
 }
