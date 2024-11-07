@@ -108,6 +108,14 @@ public:
     QString getNameGroup(QString id);
     QString getNameCourse(QString id);
 
+    QString getIdOrganization(QString name);
+    QString getIdGroup(QString name);
+    QString getIdCourse(QString name);
+
+    int setPOrgFromNameOrg(const QString &id, const QString &nameOrg);
+    int setPGroupFromNameGroup(const QString &id, const QString &nameGroup);
+    int setPersonComment(const QString &id, const QString &comment);
+
     int getLengthCourse(QString id);
     int getCntKPCourse(QString id);
     int getClimb(QString id);

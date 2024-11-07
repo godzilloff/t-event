@@ -116,6 +116,11 @@ void QSportEvent::setPSurnameFromId(const QString &id, const QString &surname)
     races_.at(0)->setPSurnameFromId(id, surname);
 }
 
+void QSportEvent::setPersonComment(const QString &id, const QString &comment)
+{
+    races_.at(0)->setPersonComment(id, comment);
+}
+
 int QSportEvent::getCardNumFromBib(int bib)
 {
     return races_.at(0)->getCardNumFromBib(bib);
@@ -149,6 +154,16 @@ int QSportEvent::setBibFromId(QString id, int bib)
 int QSportEvent::setBibFromCardNum(int cardNum, int bib)
 {
     return races_.at(0)->setBibFromCardNum(cardNum, bib);
+}
+
+int QSportEvent::setPOrgFromNameOrg(const QString &id, const QString &nameOrg)
+{
+    return races_.at(0)->setPOrgFromNameOrg(id, nameOrg);
+}
+
+int QSportEvent::setPGroupFromNameGroup(const QString &id, const QString &nameGroup)
+{
+    return races_.at(0)->setPGroupFromNameGroup(id, nameGroup);
 }
 
 int QSportEvent::clearBibInResult(int cardNum)

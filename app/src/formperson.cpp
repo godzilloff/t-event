@@ -71,6 +71,10 @@ void FormPerson::onAccepted()
     ptrSEvent->setPSurnameFromId(id,ui->ed_surname->text());
     ptrSEvent->setBibFromId(id,ui->ed_bib->text().toInt());
     ptrSEvent->setBibFromId(id,ui->ed_bib->text().toInt());
+    ptrSEvent->setPOrgFromNameOrg(id,ui->cb_org->currentText());
+    ptrSEvent->setPGroupFromNameGroup(id,ui->cb_group->currentText());
+    ptrSEvent->setPersonComment(id,ui->pled_comment->toPlainText());
+
 }
 
 void FormPerson::update_organization()

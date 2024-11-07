@@ -162,6 +162,10 @@ public:
     QString getGroupId(){ return data.group_id;};
     QString getId(){ return data.id;};
 
+    void setComment(const QString &comment){ data.comment = comment;};
+    void setOrganizationId(const QString &organization_id){ data.organization_id = organization_id;};
+    void setGroupId(const QString &group_id){ data.group_id = group_id;};
+
     const st_person* getDataPersonBib(){ return &data;};
 
 

@@ -558,6 +558,45 @@ int race::setBibFromCardNum(int cardNum, int bib)
     return -1;
 }
 
+int race::setPOrgFromNameOrg(const QString &id, const QString &nameOrg)
+{
+    QString id_org = getIdOrganizationByName(nameOrg);
+    if (id_org != ""){
+        for(person* x: persons_){
+            if (x->getId() == id){
+                x->setOrganizationId(id_org);
+                return 0;
+            }
+        }
+    }
+    return -1;
+}
+
+int race::setPGroupFromNameGroup(const QString &id, const QString &nameGroup)
+{
+    QString id_group = getIdGroupByName(nameGroup);
+    if (id_group != ""){
+        for(person* x: persons_){
+            if (x->getId() == id){
+                x->setGroupId(id_group);
+                return 0;
+            }
+        }
+    }
+    return -1;
+}
+
+int race::setPersonComment(const QString &id, const QString &comment)
+{
+    for(person* x: persons_){
+        if (x->getId() == id){
+            x->setComment(comment);
+            return 0;
+        }
+    }
+    return -1;
+}
+
 int race::clearBibInResult(int cardNum)
 {
     for(result* x: results_){
@@ -621,6 +660,33 @@ QString race::getNameOrganization(QString id)
             return x->getName();
     }
     return str_name;
+}
+
+QString race::getIdOrganization(QString name)
+{
+    for(organization* x: organizations_){
+        if (x->getName() == name)
+            return x->getId();
+    }
+    return QString{};
+}
+
+QString race::getIdGroup(QString name)
+{
+    for(group* x: groups_){
+        if (x->getName() == name)
+            return x->getId();
+    }
+    return QString{};
+}
+
+QString race::getIdCourse(QString name)
+{
+    for(course* x: courses_){
+        if (x->getName() == name)
+            return x->getId();
+    }
+    return QString{};
 }
 
 QString race::getNameGroupFromBib(int number)

@@ -37,6 +37,7 @@ public:
     const int getBibFromCardNum(int cardNum);
     void setPNameFromId(const QString &id, const QString &name);
     void setPSurnameFromId(const QString &id, const QString &surname);
+    void setPersonComment(const QString &id, const QString &comment);
     int getCardNumFromBib(int bib);
     int setCardNumFromBib(int bib, int cardNum);
     int setCardNumFromId(const QString &id, int cardNum);
@@ -44,6 +45,8 @@ public:
     void clearAllCardNum();
     int setBibFromId(QString id, int bib);
     int setBibFromCardNum(int cardNum, int bib);
+    int setPOrgFromNameOrg(const QString &id, const QString &nameOrg);
+    int setPGroupFromNameGroup(const QString &id, const QString &nameGroup);
     int clearBibInResult(int cardNum);
     int addResult(int bib, QByteArray ba);
 
