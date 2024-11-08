@@ -121,6 +121,11 @@ void QSportEvent::setPersonComment(const QString &id, const QString &comment)
     races_.at(0)->setPersonComment(id, comment);
 }
 
+void QSportEvent::setPersonBirthDate(const QString &id, const QString &birthDate)
+{
+    races_.at(0)->setPersonBirthDate(id, birthDate);
+}
+
 int QSportEvent::getCardNumFromBib(int bib)
 {
     return races_.at(0)->getCardNumFromBib(bib);

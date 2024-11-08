@@ -115,6 +115,7 @@ public:
     int setPOrgFromNameOrg(const QString &id, const QString &nameOrg);
     int setPGroupFromNameGroup(const QString &id, const QString &nameGroup);
     int setPersonComment(const QString &id, const QString &comment);
+    int setPersonBirthDate(const QString &id, const QString &birthDate);
 
     int getLengthCourse(QString id);
     int getCntKPCourse(QString id);

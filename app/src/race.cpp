@@ -597,6 +597,17 @@ int race::setPersonComment(const QString &id, const QString &comment)
     return -1;
 }
 
+int race::setPersonBirthDate(const QString &id, const QString &birthDate)
+{
+    for(person* x: persons_){
+        if (x->getId() == id){
+            x->setBirthDate(birthDate);
+            return 0;
+        }
+    }
+    return -1;
+}
+
 int race::clearBibInResult(int cardNum)
 {
     for(result* x: results_){

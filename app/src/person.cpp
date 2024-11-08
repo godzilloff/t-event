@@ -1,5 +1,7 @@
 #include "person.h"
 
+#include <QDate>
+
 person::person(int bib){
     data.bib = bib;
     //qDebug() << "person::person()\n";
@@ -84,6 +86,20 @@ int person::setCardNum(int cardNum)
 {
     data.card_number = cardNum;
     return cardNum;
+}
+
+void person::setBirthDate(const QString &StrBirthDate)
+{
+    data.birth_date = StrBirthDate;
+    QDate date = QDate::fromString(StrBirthDate, "yyyy-MM-dd");
+    data.year = date.year();
+}
+
+void person::setYear(int year)
+{
+    data.year = year;
+    QDate date; date.setDate(year,1,1);
+    data.birth_date = date.toString("yyyy-MM-dd");
 }
 
 

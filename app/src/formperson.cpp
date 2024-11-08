@@ -74,7 +74,7 @@ void FormPerson::onAccepted()
     ptrSEvent->setPOrgFromNameOrg(id,ui->cb_org->currentText());
     ptrSEvent->setPGroupFromNameGroup(id,ui->cb_group->currentText());
     ptrSEvent->setPersonComment(id,ui->pled_comment->toPlainText());
-
+    ptrSEvent->setPersonBirthDate(id,ui->ed_date->date().toString("yyyy-MM-dd"));
 }
 
 void FormPerson::update_organization()

@@ -165,7 +165,8 @@ public:
     void setComment(const QString &comment){ data.comment = comment;};
     void setOrganizationId(const QString &organization_id){ data.organization_id = organization_id;};
     void setGroupId(const QString &group_id){ data.group_id = group_id;};
-
+    void setBirthDate(const QString &StrBirthDate);
+    void setYear(int year);
     const st_person* getDataPersonBib(){ return &data;};
 
 
