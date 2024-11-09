@@ -149,9 +149,6 @@ public:
     QString getName(){ return data.name;};
     QString getSurname(){ return data.surname;};
     QString getFullName(){ return data.name + " " + data.surname;};
-    void setName(const QString &name){ data.name = name;};
-    void setSurname(const QString &surname){ data.surname = surname;};
-
 
     int getSex(){ return data.sex;};
     int getYear(){ return data.year;};
@@ -162,13 +159,15 @@ public:
     QString getGroupId(){ return data.group_id;};
     QString getId(){ return data.id;};
 
+    void setName(const QString &name){ data.name = name;};
+    void setSurname(const QString &surname){ data.surname = surname;};
     void setComment(const QString &comment){ data.comment = comment;};
     void setOrganizationId(const QString &organization_id){ data.organization_id = organization_id;};
     void setGroupId(const QString &group_id){ data.group_id = group_id;};
     void setBirthDate(const QString &StrBirthDate);
     void setYear(int year);
+    void setStartTime(int time_ms){ data.start_time = time_ms;};
     const st_person* getDataPersonBib(){ return &data;};
-
 
 private:
     st_person data;

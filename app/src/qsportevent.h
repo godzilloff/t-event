@@ -39,6 +39,7 @@ public:
     void setPSurnameFromId(const QString &id, const QString &surname);
     void setPersonComment(const QString &id, const QString &comment);
     void setPersonBirthDate(const QString &id, const QString &birthDate);
+    int setPersonStartTime(const QString &id, const int &startTime);
     int getCardNumFromBib(int bib);
     int setCardNumFromBib(int bib, int cardNum);
     int setCardNumFromId(const QString &id, int cardNum);

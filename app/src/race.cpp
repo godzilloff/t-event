@@ -608,6 +608,17 @@ int race::setPersonBirthDate(const QString &id, const QString &birthDate)
     return -1;
 }
 
+int race::setPersonStartTime(const QString &id, const int &startTime)
+{
+    for(person* x: persons_){
+        if (x->getId() == id){
+            x->setStartTime(startTime);
+            return 0;
+        }
+    }
+    return -1;
+}
+
 int race::clearBibInResult(int cardNum)
 {
     for(result* x: results_){
