@@ -52,6 +52,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         src/functions.h src/functions.cpp
         src/formprepar.h src/formprepar.cpp src/formprepar.ui
         src/racesettings.h src/racesettings.cpp
+        src/formfilter.h src/formfilter.cpp src/formfilter.ui
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET T-Event APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR

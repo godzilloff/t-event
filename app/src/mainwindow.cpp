@@ -38,6 +38,7 @@ MainWindow::MainWindow(QWidget *parent)
     clock_time(new QLabel),
     ui_info(new FormInfo(this)),
     ui_person(new FormPerson(this)),
+    ui_filter(new FormFilter(this)),
     ui_prepar(new FormPrepar(this)),
     ui_result(new FormResult(this)),
     ui_online(new FormOnline(this)),
@@ -51,6 +52,8 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     ui_info->hide();
+    ui_person->hide();
+    ui_filter->hide();
     ui_person->hide();
     ui_prepar->hide();
     ui_result->hide();
@@ -91,6 +94,7 @@ MainWindow::~MainWindow()
     delete ui;
     delete ui_info;
     delete ui_person;
+    delete ui_filter;
     delete ui_prepar;
     delete ui_result;
     delete comport_timer;
@@ -153,6 +157,7 @@ void MainWindow::createNewSEvent()
 void MainWindow::initActionsConnections()
 {
     connect(ui->act_new, &QAction::triggered, this, &MainWindow::createNewSEvent);
+    connect(ui->act_filtr, &QAction::triggered, this, &MainWindow::onShowFilter);
     connect(ui->act_preparation, &QAction::triggered, this, &MainWindow::onShowPrep);
 
     connect(ui->act_connect_comport, &QAction::triggered, this, &MainWindow::openSerialPort);
@@ -563,6 +568,10 @@ void MainWindow::on_act_info_triggered()
     }
 }
 
+void MainWindow::onShowFilter()
+{
+    ui_filter->show();
+}
 
 void MainWindow::onShowPrep()
 {

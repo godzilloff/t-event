@@ -42,6 +42,7 @@ add_executable(qtests tst_test.cpp
     ../app/src/torganizationmodel.cpp ../app/src/torganizationmodel.h
     ../app/src/tpersonmodel.cpp ../app/src/tpersonmodel.h
     ../app/src/tresultmodel.cpp ../app/src/tresultmodel.h
+    ../app/src/formfilter.h ../app/src/formfilter.cpp ../app/src/formfilter.ui
 )
 add_test(NAME test COMMAND test)
 

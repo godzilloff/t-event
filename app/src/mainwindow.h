@@ -12,6 +12,7 @@
 #include "qsportevent.h"
 #include "forminfo.h"
 #include "formperson.h"
+#include "formfilter.h"
 #include "formprepar.h"
 #include "formresult.h"
 #include "formonline.h"
@@ -91,6 +92,7 @@ private slots:
     void on_act_open_triggered();
 
     void openRecent();
+    void onShowFilter();
     void onShowPrep();
 
     void on_act_Sportorg_JSON_triggered();
@@ -129,6 +131,7 @@ private:
 
     FormInfo* ui_info = nullptr;
     FormPerson* ui_person = nullptr;
+    FormFilter* ui_filter = nullptr;
     FormPrepar* ui_prepar = nullptr;
     FormResult* ui_result = nullptr;
     FormOnline* ui_online = nullptr;
