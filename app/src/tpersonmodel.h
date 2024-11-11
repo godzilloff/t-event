@@ -58,6 +58,7 @@ public:
 
 public slots:
     void setOrganization(const QString &orgName);
+    void setGroup(const QString &grName);
 
 protected:
     bool filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const override;
@@ -65,6 +66,7 @@ protected:
 
 private:
     QString organzationName;
+    QString groupName;
 
 };
 

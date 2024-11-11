@@ -115,14 +115,31 @@ QVariant TPersonProxyModel::headerData(int section, Qt::Orientation orientation,
 
 void TPersonProxyModel::setOrganization(const QString &orgName)
 {
-    organzationName = orgName;
+    if (organzationName != orgName){
+        organzationName = orgName;
+        invalidateFilter();
+    }
+}
+
+void TPersonProxyModel::setGroup(const QString &grName)
+{
+    if (groupName != grName){
+        groupName = grName;
+        invalidateFilter();
+    }
 }
 
 bool TPersonProxyModel::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const
 {
-    QModelIndex indOrg = sourceModel()->index(
-        sourceRow, TpersonModel::ColNumTablePerson::COrg,sourceParent);
-    if ((organzationName != "") ||
-        (sourceModel()->data(indOrg).toString() == organzationName)) return false;
+    if ((organzationName != "")||(groupName != ""))
+    {
+        QVariant cellOrg = sourceModel()->data(sourceModel()->index(sourceRow, TpersonModel::ColNumTablePerson::COrg));
+        QVariant cellGroup = sourceModel()->data(sourceModel()->index(sourceRow, TpersonModel::ColNumTablePerson::CGroup));
+
+        if (groupName == "") return (cellOrg == QVariant(organzationName));
+        if (organzationName == "") return (cellGroup == QVariant(groupName));
+
+        return ((cellOrg == QVariant(organzationName))&&(cellGroup == QVariant(groupName)));
+    }
     else return true;
 }

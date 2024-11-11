@@ -1,6 +1,8 @@
 #include "formfilter.h"
 #include "ui_formfilter.h"
 
+#include "mainwindow.h"
+
 FormFilter::FormFilter(QWidget *parent)
     : QDialog(parent)
     , ui(new Ui::FormFilter),
@@ -44,12 +46,14 @@ void FormFilter::recieveDataFromMain()
     update_group();
 }
 
-void updateStrOrg(int index)
+void FormFilter::updateStrOrg(int index)
 {
-
+    MainWindow *mainWindow = static_cast<MainWindow*>(parent());
+    mainWindow->proxyModelPerson->setOrganization(ui->cb_org->currentText());
 }
 
-void updateStrGroup(int index)
+void FormFilter::updateStrGroup(int index)
 {
-
+    MainWindow *mainWindow = static_cast<MainWindow*>(parent());
+    mainWindow->proxyModelPerson->setGroup(ui->cb_group->currentText());
 }
