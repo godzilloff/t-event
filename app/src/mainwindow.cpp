@@ -72,6 +72,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     QObject::connect(this, &MainWindow::sendDataToDialog, ui_info, &FormInfo::recieveDataFromMain);
     QObject::connect(this, &MainWindow::sendDataPersonToDialog, ui_person, &FormPerson::recieveDataFromMain);
+    QObject::connect(this, &MainWindow::sendPtrToFilter, ui_filter, &FormFilter::recieveDataFromMain);
     QObject::connect(this, &MainWindow::sendDataResultToDialog, ui_result, &FormResult::recieveDataFromMain);
     QObject::connect(this, &MainWindow::sendDataOnlineToDialog, ui_online, &FormOnline::recieveDataFromMain);
 
@@ -116,6 +117,7 @@ MainWindow::~MainWindow()
 void MainWindow::update_ptr()
 {
     ui_person->update_sevent(pSEvent);
+    ui_filter->update_sevent(pSEvent);
     ui_prepar->update_sevent(pSEvent);
     ui_result->update_sevent(pSEvent);
     ui_online->update_sevent(pSEvent);
@@ -570,6 +572,7 @@ void MainWindow::on_act_info_triggered()
 
 void MainWindow::onShowFilter()
 {
+    sendPtrToFilter();
     ui_filter->show();
 }
 

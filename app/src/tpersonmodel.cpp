@@ -112,3 +112,17 @@ QVariant TPersonProxyModel::headerData(int section, Qt::Orientation orientation,
 {
     return sourceModel()->headerData(section, orientation, role);
 }
+
+void TPersonProxyModel::setOrganization(const QString &orgName)
+{
+    organzationName = orgName;
+}
+
+bool TPersonProxyModel::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const
+{
+    QModelIndex indOrg = sourceModel()->index(
+        sourceRow, TpersonModel::ColNumTablePerson::COrg,sourceParent);
+    if ((organzationName != "") ||
+        (sourceModel()->data(indOrg).toString() == organzationName)) return false;
+    else return true;
+}

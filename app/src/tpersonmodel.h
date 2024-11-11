@@ -56,11 +56,15 @@ public:
 
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
+public slots:
+    void setOrganization(const QString &orgName);
+
 protected:
-           //bool filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const override;
-           //bool lessThan(const QModelIndex &left, const QModelIndex &right) const override;
+    bool filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const override;
+    //bool lessThan(const QModelIndex &left, const QModelIndex &right) const override;
 
 private:
+    QString organzationName;
 
 };
 

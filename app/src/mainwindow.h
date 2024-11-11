@@ -68,6 +68,7 @@ public:
 signals:
     void sendDataToDialog(const st_race& data_);
     void sendDataPersonToDialog(const st_person* data_);
+    void sendPtrToFilter();
     void sendDataResultToDialog(const st_result* data_);
     void sendDataOnlineToDialog();
 
