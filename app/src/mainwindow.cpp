@@ -644,8 +644,8 @@ void MainWindow::onTablePerson_dblclk(const QModelIndex &index){
     ui_log_msg("on_doubleclick_person");
     int row = index.row();
 
-    QString pid = modelPerson->data(
-                    modelPerson->index(row, TpersonModel::ColNumTablePerson::CID),
+    QString pid = proxyModelPerson->data(
+                    proxyModelPerson->index(row, TpersonModel::ColNumTablePerson::CID),
                         Qt::DisplayRole).toString();
     const st_person* data_ = pSEvent->getDataPersonId(pid);
     if (data_ != nullptr){
