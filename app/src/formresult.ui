@@ -161,7 +161,93 @@
      </widget>
     </item>
     <item row="8" column="1">
-     <widget class="QComboBox" name="cb_status"/>
+     <widget class="QComboBox" name="cb_status">
+      <item>
+       <property name="text">
+        <string>-</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>ОК</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>Финишировал</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>ДИСКВ.</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>Непр. отметка</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>Сошёл</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>Активный</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>Неактивный</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>ПРЕВЫШЕНО КВ</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>Проведена жеребьёвка</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>Вне конкурса</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>Перемещён</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>Перемещён наверх</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>НЕ СТАРТ.</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>Не заявлен</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>Заявка отменена</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>Восстановлен</string>
+       </property>
+      </item>
+     </widget>
     </item>
     <item row="9" column="1">
      <widget class="QLineEdit" name="ed_comment"/>

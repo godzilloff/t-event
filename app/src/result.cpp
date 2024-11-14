@@ -116,3 +116,33 @@ void result::addBackup(const QString &path)
     file.close();
     return;
 }
+
+QString result::getResultStatus(int idStat)
+{
+    switch (idStat) {
+    case NONE:                  return "-";  break;
+    case OK:                    return "OK";  break;
+    case FINISHED:              return "Финишировал"; break;
+    case DISQUALIFIED:          return "ДИСКВ.";  break;
+    case MISSING_PUNCH:         return "Непр. отметка";  break;
+    case DID_NOT_FINISH:        return "СОШЁЛ";  break;
+    case ACTIVE:                return "Активный";  break;
+    case INACTIVE:              return "Неактивный";  break;
+    case OVER_TIME:             return "ПРЕВЫШЕНО КВ";  break;
+    case SPORTING_WITHDRAWAL:   return "Проведена жеребьёвка";  break;
+    case NOT_COMPETING:         return "Вне конкурса";  break;
+    case MOVED:                 return "Перемещён";  break;
+    case MOVED_UP:              return "Перемещён наверх";  break;
+    case DID_NOT_START:         return "НЕ СТАРТ.";  break;
+    case DID_NOT_ENTER:         return "Не заявлен";  break;
+    case CANCELLED:             return "Заявка отменена";  break;
+    case RESTORED:              return "Восстановлен";  break;
+    default: break;
+    }
+    return QString{};
+}
+
+QString result::getResultStatus()
+{
+    return getResultStatus(data.status);
+}

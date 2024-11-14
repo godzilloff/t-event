@@ -89,6 +89,26 @@ struct st_result{
 class result
 {
 public:
+    enum Status{
+        NONE = 0,
+        OK, //'OK'
+        FINISHED, // 'Finished'
+        DISQUALIFIED, // 'Disqualified'
+        MISSING_PUNCH, // 'MissingPunch'
+        DID_NOT_FINISH, // 'DidNotFinish'
+        ACTIVE, // 'Active'
+        INACTIVE, // 'Inactive'
+        OVER_TIME, // 'OverTime'
+        SPORTING_WITHDRAWAL, // 'SportingWithdrawal'
+        NOT_COMPETING, // 'NotCompeting'
+        MOVED, // 'Moved'
+        MOVED_UP, // 'MovedUp'
+        DID_NOT_START, // 'DidNotStart'
+        DID_NOT_ENTER, // 'DidNotEnter'
+        CANCELLED, // 'Cancelled'
+        RESTORED
+    };
+
     result();
     result(QJsonObject objJson);
     QJsonObject toJson() const;
@@ -108,6 +128,9 @@ public:
 
     QString getStrBackupResult();
     void addBackup(const QString &path);
+
+    QString getResultStatus(int idStat);
+    QString getResultStatus();
 
     //void setItPerson(QVector<person*>::Iterator it_){it = it_;};
 

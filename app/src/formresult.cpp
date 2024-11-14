@@ -40,6 +40,7 @@ void FormResult::recieveDataFromMain(const st_result* data_)
     ui->ed_start->setTime(time_start);
     ui->ed_finish->setTime(time_finish);
     ui->ed_result->setTime(time_result);
+    ui->cb_status->setCurrentIndex(data_->status);
 }
 
 void FormResult::onCheck_bib(const QString &)
