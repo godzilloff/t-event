@@ -13,7 +13,7 @@ result::result(QJsonObject objJson)
     data.bib = objJson.value("bib").toInt();
     data.can_win_count = objJson.value("can_win_count").toInt();
     data.card_number = objJson.value("card_number").toInt();
-    data.created_at = -1.0;//1722189634.093181;         // <------------
+    data.created_at = objJson.value("created_at").toDouble();//1722189634.093181;         // <------------
     data.credit_time = objJson.value("credit_time").toInt();
     data.days = objJson.value("days").toInt();
     data.diff = objJson.value("diff").toInt();
@@ -117,7 +117,7 @@ void result::addBackup(const QString &path)
     return;
 }
 
-QString result::getResultStatus(int idStat)
+QString result::getResultStatusName(int idStat)
 {
     switch (idStat) {
     case NONE:                  return "-";  break;
@@ -142,7 +142,7 @@ QString result::getResultStatus(int idStat)
     return QString{};
 }
 
-QString result::getResultStatus()
+QString result::getResultStatusName()
 {
-    return getResultStatus(data.status);
+    return getResultStatusName(data.status);
 }

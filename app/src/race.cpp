@@ -3,6 +3,7 @@
 
 #include <QFile>
 #include <QDir>
+#include <QDateTime>
 
 race::race(){}
 
@@ -70,15 +71,15 @@ int race::addResult(int bib, QByteArray ba)
 
     int res_ms = pstres->finishMs - pstres->startMs;
 
-    QTime time =QTime::currentTime();
+    QDateTime datetime =QDateTime::currentDateTime();
 
     QJsonObject json;
     //json["assigned_rank"] = data.assigned_rank;
     json["bib"] = bib;
     //json["can_win_count"] = data.can_win_count;
     json["card_number"] = pstres->cardNum;
-    json["created_at"] = time.msecsSinceStartOfDay();
-    json["credit_time"] = 0;
+    json["created_at"] = datetime.toSecsSinceEpoch();
+    //json["credit_time"] = time.msecsSinceStartOfDay();
     //json["days"] = data.days;
     //json["diff"] = data.diff;
     //json["diff_scores"] = data.diff_scores;
@@ -547,17 +548,6 @@ int race::setBibFromId(QString id, int bib)
     return -1;
 }
 
-int race::setBibFromCardNum(int cardNum, int bib)
-{
-    for(result* x: results_){
-        if (x->getCardNumber() == cardNum){
-            x->setBibResult(bib);
-            return 0;
-        }
-    }
-    return -1;
-}
-
 int race::setPOrgFromNameOrg(const QString &id, const QString &nameOrg)
 {
     QString id_org = getIdOrganizationByName(nameOrg);
@@ -613,6 +603,39 @@ int race::setPersonStartTime(const QString &id, const int &startTime)
     for(person* x: persons_){
         if (x->getId() == id){
             x->setStartTime(startTime);
+            return 0;
+        }
+    }
+    return -1;
+}
+
+int race::setResultStatus(int cardNum, int status)
+{
+    for(result* x: results_){
+        if (x->getCardNumber() == cardNum){
+            x->setStatus(status);
+            return 0;
+        }
+    }
+    return -1;
+}
+
+int race::setResultStatus(double created, int status)
+{
+    for(result* x: results_){
+        if (x->getCreatedAt() == created){
+            x->setStatus(status);
+            return 0;
+        }
+    }
+    return -1;
+}
+
+int race::setBibInResult(double created, int bib)
+{
+    for(result* x: results_){
+        if (x->getCreatedAt() == created){
+            x->setBibResult(bib);
             return 0;
         }
     }

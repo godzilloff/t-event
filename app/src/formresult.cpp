@@ -28,7 +28,7 @@ void FormResult::update_sevent(std::shared_ptr<QSportEvent> &pSEvent)
 void FormResult::recieveDataFromMain(const st_result* data_)
 {
     ptrDataResult = data_;
-    QTime time_create = QTime::fromMSecsSinceStartOfDay(data_->credit_time);
+    QDateTime datetime_create = QDateTime::fromSecsSinceEpoch(data_->created_at);
     QTime time_start  = QTime::fromMSecsSinceStartOfDay(data_->start_time);
     QTime time_finish = QTime::fromMSecsSinceStartOfDay(data_->finish_time);
     QTime time_result = QTime::fromMSecsSinceStartOfDay(data_->result_msec);
@@ -36,7 +36,7 @@ void FormResult::recieveDataFromMain(const st_result* data_)
 
     int temp = data_->bib;
     ui->ed_bib->setValue(temp);
-    ui->ed_create->setTime(time_create);
+    ui->ed_create->setDateTime(datetime_create);
     ui->ed_start->setTime(time_start);
     ui->ed_finish->setTime(time_finish);
     ui->ed_result->setTime(time_result);
@@ -70,5 +70,6 @@ void FormResult::onCheck_bib(const QString &)
 
 void FormResult::onAccepted()
 {
-    ptrSEvent->setBibFromCardNum(ptrDataResult->card_number, ui->ed_bib->value());
+    ptrSEvent->setBibInResult(ptrDataResult->created_at, ui->ed_bib->value());
+    ptrSEvent->setResultStatus(ptrDataResult->created_at, ui->cb_status->currentIndex());
 }

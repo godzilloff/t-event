@@ -46,10 +46,12 @@ public:
     int setCardNumFromCsv(QString path);
     void clearAllCardNum();
     int setBibFromId(QString id, int bib);
-    int setBibFromCardNum(int cardNum, int bib);
+    int setBibInResult(double created, int bib);
     int setPOrgFromNameOrg(const QString &id, const QString &nameOrg);
     int setPGroupFromNameGroup(const QString &id, const QString &nameGroup);
     int clearBibInResult(int cardNum);
+    int setResultStatus(int cardNum, int status);
+    int setResultStatus(double created, int status);
     int addResult(int bib, QByteArray ba);
 
     QString getOnlineUrl();

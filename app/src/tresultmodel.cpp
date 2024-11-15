@@ -42,7 +42,7 @@ QVariant TresultModel::data(const QModelIndex &index, int role) const
             case CStart:    res = QTime::fromMSecsSinceStartOfDay(results_->at(index.row())->getStartMsec()).toString("hh:mm:ss"); break;
             case CFinish:   res = QTime::fromMSecsSinceStartOfDay(results_->at(index.row())->getFinishMsec()).toString("hh:mm:ss"); break;
             case CResult:   res = QTime::fromMSecsSinceStartOfDay(results_->at(index.row())->getResultMsec()).toString("hh:mm:ss.z"); break;
-            case CStatus:   res = results_->at(index.row())->getResultStatus();
+            case CStatus:   res = results_->at(index.row())->getResultStatusName();
             default:
                 break;
             }

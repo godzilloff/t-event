@@ -161,9 +161,9 @@ int QSportEvent::setBibFromId(QString id, int bib)
     return races_.at(0)->setBibFromId(id, bib);
 }
 
-int QSportEvent::setBibFromCardNum(int cardNum, int bib)
+int QSportEvent::setBibInResult(double created, int bib)
 {
-    return races_.at(0)->setBibFromCardNum(cardNum, bib);
+    return races_.at(0)->setBibInResult(created, bib);
 }
 
 int QSportEvent::setPOrgFromNameOrg(const QString &id, const QString &nameOrg)
@@ -179,6 +179,16 @@ int QSportEvent::setPGroupFromNameGroup(const QString &id, const QString &nameGr
 int QSportEvent::clearBibInResult(int cardNum)
 {
     return races_.at(0)->clearBibInResult(cardNum);
+}
+
+int QSportEvent::setResultStatus(int cardNum, int status)
+{
+    return races_.at(0)->setResultStatus(cardNum, status);
+}
+
+int QSportEvent::setResultStatus(double created, int status)
+{
+    return races_.at(0)->setResultStatus(created, status);
 }
 
 int QSportEvent::addResult(int bib, QByteArray ba)

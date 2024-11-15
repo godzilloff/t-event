@@ -85,8 +85,12 @@ public:
     int setCardNumFromId(const QString &id, int cardNum);
     int setCardNumFromCsv(QString path);
     int setBibFromId(QString id, int bib);
-    int setBibFromCardNum(int cardNum, int bib);
+
+    int setResultStatus(int cardNum, int status);
+    int setResultStatus(double created, int status);
+    int setBibInResult(double created, int bib);
     int clearBibInResult(int cardNum);
+
     int addResult(int bib, QByteArray ba);
 
     QString getOnlineUrl();

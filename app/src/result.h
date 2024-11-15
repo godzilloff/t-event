@@ -113,12 +113,15 @@ public:
     result(QJsonObject objJson);
     QJsonObject toJson() const;
 
+    double getCreatedAt(){return data.created_at;};
     int getCardNumber(){ return data.card_number;};
     int getStartMsec(){ return data.start_msec;};
     int getFinishMsec(){ return data.finish_msec;};
     //QString getResultStr(){ return data.result;};
     QString getResultStr(){ return QTime::fromMSecsSinceStartOfDay(data.result_msec).toString("hh:mm:ss");};
     int getResultMsec(){ return data.result_msec;};
+    int getStatus(){return data.status;};
+    QString getStatusComment(){return data.status_comment;};
     int getBibResult(){return data.bib;};
 
     void clearBibResult(){data.bib = 0;};
@@ -129,8 +132,9 @@ public:
     QString getStrBackupResult();
     void addBackup(const QString &path);
 
-    QString getResultStatus(int idStat);
-    QString getResultStatus();
+    QString getResultStatusName(int idStat);
+    QString getResultStatusName();
+    void setStatus(int idStat){data.status = idStat;};
 
     //void setItPerson(QVector<person*>::Iterator it_){it = it_;};
 
