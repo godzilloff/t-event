@@ -13,7 +13,7 @@ FormPerson::FormPerson(QWidget *parent)
     ui->setupUi(this);
 
     connect(ui->buttonBox, &QDialogButtonBox::accepted, this, &FormPerson::onAccepted);
-    connect(ui->ed_cardNum, &QLineEdit::textChanged, this, &FormPerson::onCheck_numCard);
+    connect(ui->ed_cardNum, &QSpinBox::textChanged, this, &FormPerson::onCheck_numCard);
 
 }
 
@@ -38,8 +38,8 @@ void FormPerson::recieveDataFromMain(const st_person* data_)
 
     ui->ed_name->setText(data_->name);
     ui->ed_surname->setText(data_->surname);
-    ui->ed_bib->setText(QString::number(data_->bib));
-    ui->ed_cardNum->setText(QString::number(data_->card_number));
+    ui->ed_bib->setValue(data_->bib);
+    ui->ed_cardNum->setValue(data_->card_number);
     ui->ted_start->setTime(time);
     ui->cb_qual->setCurrentIndex(data_->qual);
     ui->ed_date->setDate(birth_date_d);
@@ -53,7 +53,7 @@ void FormPerson::onCheck_numCard(const QString &text)
 {
     //qDebug() << "on_check_numCard_textChanged ok";
     int card = text.toInt();
-    if (ptrSEvent->isCardNumFree(card))
+    if ( (card==0)||(ptrSEvent->isCardNumFree(card)) )
     {
         ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(true);
         ui->lb_check_cardNum->setText(text + " - доступен");

@@ -35,7 +35,7 @@
      <x>10</x>
      <y>10</y>
      <width>461</width>
-     <height>431</height>
+     <height>433</height>
     </rect>
    </property>
    <layout class="QFormLayout" name="formLayout">
@@ -114,12 +114,6 @@
        <string>Комментарий</string>
       </property>
      </widget>
-    </item>
-    <item row="6" column="1">
-     <widget class="QLineEdit" name="ed_bib"/>
-    </item>
-    <item row="8" column="1">
-     <widget class="QLineEdit" name="ed_cardNum"/>
     </item>
     <item row="7" column="1">
      <widget class="QTimeEdit" name="ted_start">
@@ -209,6 +203,20 @@
      <widget class="QLabel" name="lb_check_cardNum">
       <property name="text">
        <string>*Проверка чипа*</string>
+      </property>
+     </widget>
+    </item>
+    <item row="8" column="1">
+     <widget class="QSpinBox" name="ed_cardNum">
+      <property name="maximum">
+       <number>999999999</number>
+      </property>
+     </widget>
+    </item>
+    <item row="6" column="1">
+     <widget class="QSpinBox" name="ed_bib">
+      <property name="maximum">
+       <number>9999999</number>
       </property>
      </widget>
     </item>
