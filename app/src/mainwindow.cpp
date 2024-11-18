@@ -383,12 +383,19 @@ void MainWindow::closeEvent(QCloseEvent *e)
     if (flag_need_save){
         QMessageBox::StandardButton button =
             QMessageBox::question(this,
-                "Подтверждение закрытия",
-                "Вы уверены, что хотите закрыть программу?",
-                QMessageBox::Yes | QMessageBox::No);
-        if (button == QMessageBox::No) {
+                "Вопрос",
+                "Сохранить изменения в файле?",
+                QMessageBox::Save | QMessageBox::No | QMessageBox::Cancel );
+        switch (button) {
+        case QMessageBox::Cancel:
             e->ignore();
             return;
+            break;
+        case QMessageBox::Save:
+            on_act_save_triggered();
+            break;
+        default:
+            break;
         }
     }
 
