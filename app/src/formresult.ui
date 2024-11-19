@@ -51,6 +51,9 @@
       <property name="enabled">
        <bool>false</bool>
       </property>
+      <property name="displayFormat">
+       <string>dd.MM.yyyy HH:mm:ss</string>
+      </property>
      </widget>
     </item>
     <item row="1" column="0">
