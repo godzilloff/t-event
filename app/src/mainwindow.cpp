@@ -86,6 +86,9 @@ MainWindow::MainWindow(QWidget *parent)
     QObject::connect(comport, &QSerialPort::readyRead, this, &MainWindow::readData);
     QObject::connect(comport, &QSerialPort::bytesWritten, this, &MainWindow::handleBytesWritten);
 
+    QObject::connect(ui_person, &FormPerson::requestSave,this, &MainWindow::needSave);
+    QObject::connect(ui_result, &FormResult::requestSave,this, &MainWindow::needSave);
+
     createActionsAndConnections();
     createMenus();
 }
@@ -624,14 +627,17 @@ void MainWindow::on_act_online_triggered()
     ui_online->show();
 }
 
+void MainWindow::saveSE(const QString path){
+    ui_log_msg("Save file");
+    ui_log_msg(currentFilePath);
+    pSEvent->exportSportorgJSON(currentFilePath);
+    notNeedSave();
+}
 
 void MainWindow::on_act_save_triggered()
 {
-    if ((!currentFilePath.isEmpty()) && (QFile(currentFilePath).exists())){
-        ui_log_msg("Save file");
-        ui_log_msg(currentFilePath);
-        pSEvent->exportSportorgJSON(currentFilePath);
-    }
+    if ((!currentFilePath.isEmpty()) && (QFile(currentFilePath).exists()))
+        saveSE(currentFilePath);
     else
         on_act_save_as_triggered();
 }
@@ -639,12 +645,10 @@ void MainWindow::on_act_save_triggered()
 void MainWindow::on_act_save_as_triggered()
 {
     QString file_name = QFileDialog::getSaveFileName(this, "Создать файл T-Event", QDir::currentPath(), "*.json");
-    if (file_name == "") return;
-
-    ui_log_msg("Save as file");
-    ui_log_msg(file_name);
-    pSEvent->exportSportorgJSON(file_name);
-    adjustForCurrentFile(file_name);
+    if (file_name != ""){
+        saveSE(file_name);
+        adjustForCurrentFile(file_name);
+    }
 }
 
 void MainWindow::onTablePerson_dblclk(const QModelIndex &index){

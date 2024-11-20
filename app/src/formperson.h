@@ -21,6 +21,9 @@ public:
 
     void update_sevent(std::shared_ptr<QSportEvent> &pSEvent);
 
+signals:
+    void requestSave();
+
 public slots:
     void recieveDataFromMain(const st_person* data_);
 

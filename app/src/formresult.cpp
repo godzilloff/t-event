@@ -72,4 +72,5 @@ void FormResult::onAccepted()
 {
     ptrSEvent->setBibInResult(ptrDataResult->created_at, ui->ed_bib->value());
     ptrSEvent->setResultStatus(ptrDataResult->created_at, ui->cb_status->currentIndex());
+    emit requestSave();
 }

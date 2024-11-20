@@ -76,7 +76,7 @@ void FormPerson::onAccepted()
     ptrSEvent->setPersonComment(id,ui->pled_comment->toPlainText());
     ptrSEvent->setPersonBirthDate(id,ui->ed_date->date().toString("yyyy-MM-dd"));
     ptrSEvent->setPersonStartTime(id,ui->ted_start->time().msecsSinceStartOfDay());
-
+    emit requestSave();
 }
 
 void FormPerson::update_organization()

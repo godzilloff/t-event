@@ -116,6 +116,7 @@ private slots:
     void onTablePerson_dblclk(const QModelIndex &index);
     void onTableResult_dblclk(const QModelIndex &index);
 
+    void saveSE(const QString path);
     void on_act_save_triggered();
     void updateTime();
 
