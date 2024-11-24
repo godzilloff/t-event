@@ -484,8 +484,7 @@ void MainWindow::open_JSON(const QString &path){
     adjustForCurrentFile(path);
 }
 
-
-void MainWindow::on_act_import_csv_orgeo_ru_triggered()
+void MainWindow::import_csv(QSportEvent::Type_csv tcsv)
 {
     ui_log_msg("on_act_import_csv_orgeo_ru_triggered");
     QString file_name = QFileDialog::getOpenFileName(this, "Импорт заявки", QDir::currentPath(), "*.csv");
@@ -498,12 +497,31 @@ void MainWindow::on_act_import_csv_orgeo_ru_triggered()
             pSEvent.reset();
             pSEvent = std::make_shared<QSportEvent>();
         }
-        pSEvent->importCSV(file_name);
+        pSEvent->importCSV(file_name,tcsv);
 
         update_ptr();
         update_ui_table();
         needSave();
     }
+}
+
+void MainWindow::on_act_import_csv_orgeo_ru_triggered(){
+    import_csv(QSportEvent::ORGEO);
+}
+
+
+void MainWindow::on_onOpenCsvSecretarStOne_triggered(){
+    import_csv(QSportEvent::SECRETAR_ST_ONE);
+}
+
+
+void MainWindow::on_onOpenCsvSecretarStTwo_triggered(){
+    import_csv(QSportEvent::SECRETAR_ST_TWO);
+}
+
+
+void MainWindow::on_onOpenCsvSecretarStFour_triggered(){
+    import_csv(QSportEvent::SECRETAR_ST_FOUR);
 }
 
 void MainWindow::update_ui_table(){

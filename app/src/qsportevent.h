@@ -10,6 +10,13 @@ class QSportEvent : public QObject
 {
     Q_OBJECT
 public:
+    enum Type_csv{
+        SECRETAR_ST_ONE = 0,
+        SECRETAR_ST_TWO,
+        SECRETAR_ST_FOUR,
+        ORGEO
+    };
+
     explicit QSportEvent(QObject *parent = nullptr);
     ~QSportEvent();
 
@@ -18,7 +25,7 @@ public:
     void importSportorgJSON(const QString& path);
     void exportSportorgJSON(const QString& path);
 
-    void importCSV(const QString& path);
+    void importCSV(const QString& path, Type_csv tcsv);
 
     const QString getNameOrganization(const QString& id);
     const QString getNameGroup(const QString& id);
@@ -75,6 +82,13 @@ signals:
 private:
     QVector<race*> races_;
     QJsonObject toJson() const;
+
+    st_person lineToPerson(const QStringList &data, Type_csv tcsv);
+    st_person lineToPersonFromSecretarStOne(const QStringList &data);
+    st_person lineToPersonFromSecretarStTwo(const QStringList &data);
+    st_person lineToPersonFromSecretarStFour(const QStringList &data);
+    st_person lineToPersonFromOrgeoNotPre(const QStringList &data);
+    st_person lineToPersonFromOrgeoWithPre(const QStringList &data);
 
 };
 

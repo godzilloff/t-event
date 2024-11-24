@@ -229,6 +229,98 @@ QJsonObject QSportEvent::toJson() const{
     return json;
 }
 
+st_person QSportEvent::lineToPerson(const QStringList &data, Type_csv tcsv)
+{
+    switch (tcsv) {
+    case QSportEvent::Type_csv::SECRETAR_ST_ONE:
+        return lineToPersonFromSecretarStOne(data);
+        break;
+    case QSportEvent::Type_csv::SECRETAR_ST_TWO:
+        return lineToPersonFromSecretarStTwo(data);
+        break;
+    case QSportEvent::Type_csv::SECRETAR_ST_FOUR:
+        return lineToPersonFromSecretarStFour(data);
+        break;
+    case QSportEvent::Type_csv::ORGEO:
+    default:
+        if (data.size() == 9)
+            return lineToPersonFromOrgeoWithPre(data);
+        else
+            return lineToPersonFromOrgeoNotPre(data);
+        break;
+    }
+}
+
+st_person QSportEvent::lineToPersonFromSecretarStOne(const QStringList &data)
+{
+    st_person person;
+    person.group_id = races_.at(0)->addGroupByName(data[0]);
+    person.name = data[1];
+    person.organization_id = races_.at(0)->addOrgByNameAndContact(data[2],QString{});
+    person.qual = data[3].toInt();
+    person.bib = data[4].toInt();
+    person.year = data[5].toInt();
+    person.card_number = data[6].toInt();
+    person.comment = data[7]+ " " + data[8];
+    return person;
+}
+
+st_person QSportEvent::lineToPersonFromSecretarStTwo(const QStringList &data)
+{
+    st_person person;
+    person.group_id = races_.at(0)->addGroupByName(data[0]);
+    person.name = data[1];
+    person.organization_id = races_.at(0)->addOrgByNameAndContact(data[2],QString{});
+    person.qual = data[3].toInt();
+    person.bib = data[4].toInt();
+    person.year = data[5].toInt();
+    person.card_number = data[6].toInt();
+    person.comment = data[7];
+    return person;
+}
+
+st_person QSportEvent::lineToPersonFromSecretarStFour(const QStringList &data)
+{
+    st_person person;
+    person.group_id = races_.at(0)->addGroupByName(data[0]);
+    person.name = data[1];
+    person.organization_id = races_.at(0)->addOrgByNameAndContact(data[1],QString{});
+    person.qual = data[3].toInt();
+    person.bib = data[4].toInt();
+    person.year = data[5].toInt();
+    person.card_number = data[6].toInt();
+    return person;
+}
+
+st_person QSportEvent::lineToPersonFromOrgeoNotPre(const QStringList &data)
+{
+    st_person person;
+    person.group_id = races_.at(0)->addGroupByName(data[0]);
+    person.name = data[1];
+    person.organization_id = races_.at(0)->addOrgByNameAndContact(data[2],QString{});
+    person.qual = data[3].toInt();
+    person.bib = data[4].toInt();
+    person.year = data[5].toInt();
+    person.card_number = data[6].toInt();
+    person.comment = data[7];
+
+    return person;
+}
+
+st_person QSportEvent::lineToPersonFromOrgeoWithPre(const QStringList &data)
+{
+    st_person person;
+    person.group_id = races_.at(0)->addGroupByName(data[0]);
+    person.name = data[1];
+    person.organization_id = races_.at(0)->addOrgByNameAndContact(data[2],data[3]);
+    person.qual = data[4].toInt();
+    person.bib = data[5].toInt();
+    person.year = data[6].toInt();
+    person.card_number = data[7].toInt();
+    person.comment = data[8];
+
+    return person;
+}
 
 void QSportEvent::importSportorgJSON(const QString& path){
     qDebug() << "importSportorgJSON ===="<< path<< Qt::endl ;
@@ -284,7 +376,7 @@ void QSportEvent::exportSportorgJSON(const QString &path)
 
 // Формат csv с сайта orgeo.ru:
 //Группа;ФИО;Коллектив;Представитель;Разряд;Номер;Год рождения;Номер чипа;Комментарий;
-void QSportEvent::importCSV(const QString& path){
+void QSportEvent::importCSV(const QString& path, Type_csv tcsv){
 
     QFile file(path);
     if ( !file.open(QFile::ReadOnly | QFile::Text) ) {
@@ -299,12 +391,17 @@ void QSportEvent::importCSV(const QString& path){
             line = line.trimmed(); // delete space
             QStringList data = line.split(";"); // split string
 
-            for (int i = 0; i < data.size(); i++) {
-                data[i] = data[i].trimmed();   // Обработка данных
+            if (data.size() > 4){
+                for (int i = 0; i < data.size(); i++) {
+                    data[i] = data[i].trimmed();   // Обработка данных
+                }
+                races_.at(0)->addPerson(lineToPerson(data, tcsv));
+                //QString id_group = races_.at(0)->addGroupByName(data[0]);
+                //QString id_org = races_.at(0)->addOrgByNameAndContact(data[2],data[3]);
+                //st_person unit = lineToPerson(data);
+                //races_.at(0)->addPerson(unit);
+                //races_.at(0)->addPerson(unit.name, id_org,id_group, unit.qual , unit.year, unit.comment);
             }
-            QString id_group = races_.at(0)->addGroupByName(data[0]);
-            QString id_org = races_.at(0)->addOrgByNameAndContact(data[2],data[3]);
-            races_.at(0)->addPerson(data[1], id_org,id_group , data[4], data[6], data[8]);
         }
 
         file.close();

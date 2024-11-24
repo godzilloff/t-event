@@ -324,16 +324,18 @@ int race::getIndexPerson(int number)
     return -1;
 }
 
-void race::addPerson(QString name, QString id_org, QString id_gr, QString qual, QString year, QString comment)
+void race::addPerson(const st_person &dt_input)
 {
     st_person dt;
-    splitString(name, dt.surname, dt.name);
-    dt.id = QString::number(1000 + persons_.size());
-    dt.organization_id = id_org;
-    dt.group_id = id_gr;
-    dt.year = year.toInt();
-    dt.qual = qual.toInt();
-    dt.comment = comment;
+    splitString(dt_input.name, dt.surname, dt.name);
+    dt.id = QDateTime::currentDateTime().toString("MMddHHmmss") + QString::number(1000 + persons_.size());
+    dt.organization_id = dt_input.organization_id;
+    dt.group_id = dt_input.group_id;
+    dt.year = dt_input.year;
+    dt.qual = dt_input.qual;
+    dt.bib = dt_input.bib;
+    dt.card_number = dt_input.card_number;
+    dt.comment = dt_input.comment;
 
     person* per = new person(dt);
     persons_.push_back(per);

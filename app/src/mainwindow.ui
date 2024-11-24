@@ -118,8 +118,17 @@
      <property name="title">
       <string>Импорт</string>
      </property>
+     <widget class="QMenu" name="menu_SecretarST">
+      <property name="title">
+       <string>Заличка из SecretarST</string>
+      </property>
+      <addaction name="onOpenCsvSecretarStOne"/>
+      <addaction name="onOpenCsvSecretarStTwo"/>
+      <addaction name="onOpenCsvSecretarStFour"/>
+     </widget>
      <addaction name="act_import_csv_orgeo_ru"/>
      <addaction name="act_Sportorg_JSON"/>
+     <addaction name="menu_SecretarST"/>
     </widget>
     <addaction name="act_new"/>
     <addaction name="act_save"/>
@@ -404,6 +413,21 @@
   <action name="act_preparation">
    <property name="text">
     <string>Подготовка к старту</string>
+   </property>
+  </action>
+  <action name="onOpenCsvSecretarStOne">
+   <property name="text">
+    <string>личка</string>
+   </property>
+  </action>
+  <action name="onOpenCsvSecretarStTwo">
+   <property name="text">
+    <string>связка</string>
+   </property>
+  </action>
+  <action name="onOpenCsvSecretarStFour">
+   <property name="text">
+    <string>группа</string>
    </property>
   </action>
  </widget>

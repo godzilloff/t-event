@@ -98,6 +98,7 @@ private slots:
 
     void on_act_Sportorg_JSON_triggered();
     void on_act_info_triggered();
+    void import_csv(QSportEvent::Type_csv tcsv);
     void on_act_import_csv_orgeo_ru_triggered();
 
     void on_act_show_persons_triggered();
@@ -119,6 +120,12 @@ private slots:
     void saveSE(const QString path);
     void on_act_save_triggered();
     void updateTime();
+
+    void on_onOpenCsvSecretarStOne_triggered();
+
+    void on_onOpenCsvSecretarStTwo_triggered();
+
+    void on_onOpenCsvSecretarStFour_triggered();
 
 private:
     void initActionsConnections();

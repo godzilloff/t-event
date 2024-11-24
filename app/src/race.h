@@ -58,7 +58,7 @@ public:
     int getResultMsec(const int number);
 
     int getIndexPerson(int number);
-    void addPerson(QString name, QString id_org, QString id_gr, QString qual,  QString year, QString comment);
+    void addPerson(const st_person &dt_input);
 
     const st_person* getDataPersonId(QString id);
     const st_person* getDataPersonBib(int number);

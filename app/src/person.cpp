@@ -9,14 +9,29 @@ person::person(int bib){
 
 person::person(st_person &dt)
 {
+    data.bib = dt.bib;
+    data.id = dt.id;
+    data.group_id = dt.group_id;
+    data.organization_id = dt.organization_id;
+    data.card_number = dt.card_number;
     data.name = dt.name;
     data.surname = dt.surname;
-    data.id = dt.id;
-    data.organization_id = dt.organization_id;
-    data.group_id = dt.group_id;
+    data.sex = dt.sex;
     data.year = dt.year;
+    data.birth_date = dt.birth_date;
     data.qual = dt.qual;
+    data.start_time = dt.start_time;
+    data.start_group = dt.start_group;
+
+    data.national_code = dt.national_code; // region russia, 77, 76 ...
+    data.world_code = dt.world_code;
     data.comment = dt.comment;
+    data.object = "Person";
+
+    data.is_out_of_competition = dt.is_out_of_competition;
+    data.is_paid = dt.is_paid;
+    data.is_personal = dt.is_personal;
+    data.is_rented_card = dt.is_rented_card;
 }
 
 person::person(QJsonObject objJson)
