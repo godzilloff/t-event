@@ -243,7 +243,7 @@ st_person QSportEvent::lineToPerson(const QStringList &data, Type_csv tcsv)
         break;
     case QSportEvent::Type_csv::ORGEO:
     default:
-        if (data.size() == 9)
+        if (data.size() == 10)
             return lineToPersonFromOrgeoWithPre(data);
         else
             return lineToPersonFromOrgeoNotPre(data);
@@ -253,10 +253,11 @@ st_person QSportEvent::lineToPerson(const QStringList &data, Type_csv tcsv)
 
 st_person QSportEvent::lineToPersonFromSecretarStOne(const QStringList &data)
 {
+    QString contact = QString{};
     st_person person;
     person.group_id = races_.at(0)->addGroupByName(data[0]);
     person.name = data[1];
-    person.organization_id = races_.at(0)->addOrgByNameAndContact(data[2],QString{});
+    person.organization_id = races_.at(0)->addOrgByNameAndContact(data[2], contact);
     person.qual = data[3].toInt();
     person.bib = data[4].toInt();
     person.year = data[5].toInt();
@@ -267,10 +268,11 @@ st_person QSportEvent::lineToPersonFromSecretarStOne(const QStringList &data)
 
 st_person QSportEvent::lineToPersonFromSecretarStTwo(const QStringList &data)
 {
+    QString contact = QString{};
     st_person person;
     person.group_id = races_.at(0)->addGroupByName(data[0]);
     person.name = data[1];
-    person.organization_id = races_.at(0)->addOrgByNameAndContact(data[2],QString{});
+    person.organization_id = races_.at(0)->addOrgByNameAndContact(data[2],contact);
     person.qual = data[3].toInt();
     person.bib = data[4].toInt();
     person.year = data[5].toInt();
@@ -281,10 +283,11 @@ st_person QSportEvent::lineToPersonFromSecretarStTwo(const QStringList &data)
 
 st_person QSportEvent::lineToPersonFromSecretarStFour(const QStringList &data)
 {
+    QString contact = QString{};
     st_person person;
     person.group_id = races_.at(0)->addGroupByName(data[0]);
     person.name = data[1];
-    person.organization_id = races_.at(0)->addOrgByNameAndContact(data[1],QString{});
+    person.organization_id = races_.at(0)->addOrgByNameAndContact(data[1],contact);
     person.qual = data[3].toInt();
     person.bib = data[4].toInt();
     person.year = data[5].toInt();
@@ -294,10 +297,11 @@ st_person QSportEvent::lineToPersonFromSecretarStFour(const QStringList &data)
 
 st_person QSportEvent::lineToPersonFromOrgeoNotPre(const QStringList &data)
 {
+    QString contact = QString{};
     st_person person;
     person.group_id = races_.at(0)->addGroupByName(data[0]);
     person.name = data[1];
-    person.organization_id = races_.at(0)->addOrgByNameAndContact(data[2],QString{});
+    person.organization_id = races_.at(0)->addOrgByNameAndContact(data[2],contact);
     person.qual = data[3].toInt();
     person.bib = data[4].toInt();
     person.year = data[5].toInt();
