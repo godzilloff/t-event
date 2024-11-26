@@ -384,11 +384,11 @@ void MainWindow::loadSettings()
 void MainWindow::closeEvent(QCloseEvent *e)
 {
     if (flag_need_save){
+        QString titleBox = "Вопрос";
+        QString fileName = (this->currentFilePath != "")? " ["+this->currentFilePath +"]" : "";
+        QString question = "Сохранить изменения в файл"+ fileName +"?";
         QMessageBox::StandardButton button =
-            QMessageBox::question(this,
-                "Вопрос",
-                "Сохранить изменения в файле?",
-                QMessageBox::Save | QMessageBox::No | QMessageBox::Cancel );
+            QMessageBox::question(this,titleBox,question,QMessageBox::Save | QMessageBox::No | QMessageBox::Cancel );
         switch (button) {
         case QMessageBox::Cancel:
             e->ignore();
