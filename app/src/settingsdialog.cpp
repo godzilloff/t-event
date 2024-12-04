@@ -96,12 +96,12 @@ void SettingsDialog::showPortInfo(int idx)
     const QString blankString = tr(::blankString);
 
     const QStringList list = m_ui->serialPortInfoListBox->itemData(idx).toStringList();
-    m_ui->descriptionLabel->setText(tr("Description: %1").arg(list.value(1, blankString)));
-    m_ui->manufacturerLabel->setText(tr("Manufacturer: %1").arg(list.value(2, blankString)));
-    m_ui->serialNumberLabel->setText(tr("Serial number: %1").arg(list.value(3, blankString)));
-    m_ui->locationLabel->setText(tr("Location: %1").arg(list.value(4, blankString)));
-    m_ui->vidLabel->setText(tr("Vendor Identifier: %1").arg(list.value(5, blankString)));
-    m_ui->pidLabel->setText(tr("Product Identifier: %1").arg(list.value(6, blankString)));
+    m_ui->descriptionLabel->setText(tr("Описание: %1").arg(list.value(1, blankString)));
+    m_ui->manufacturerLabel->setText(tr("Производитель: %1").arg(list.value(2, blankString)));
+    m_ui->serialNumberLabel->setText(tr("Серийный номер: %1").arg(list.value(3, blankString)));
+    m_ui->locationLabel->setText(tr("Размещение: %1").arg(list.value(4, blankString)));
+    m_ui->vidLabel->setText(tr("ИД производителя: %1").arg(list.value(5, blankString)));
+    m_ui->pidLabel->setText(tr("ИД изделия: %1").arg(list.value(6, blankString)));
 }
 
 void SettingsDialog::apply()

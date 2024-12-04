@@ -11,15 +11,15 @@ int main(int argc, char *argv[])
     QApplication::setEffectEnabled(Qt::UI_AnimateCombo, false);
     MainWindow w;
 
-    QTranslator qtTranslator;
-    if (qtTranslator.load(QLocale::system(), "qt", "_", QDir::currentPath() + "/translations"))
-    {   qApp->installTranslator(&qtTranslator);}
-    else {    qDebug() << "not loat qtTranslator";    }
+    QTranslator qtSerialTranslator;
+    if (qtSerialTranslator.load("qtserialport_" + QLocale::system().name(),QDir::currentPath() + "/translations" ))
+    {   qApp->installTranslator(&qtSerialTranslator); }
+    else {    qDebug() << "not load qtSerialTranslator";    }
 
     QTranslator qtBaseTranslator;
     if (qtBaseTranslator.load("qtbase_" + QLocale::system().name(),QDir::currentPath() + "/translations" ))
     {   qApp->installTranslator(&qtBaseTranslator); }
-    else {    qDebug() << "not loat qtBaseTranslator";    }
+    else {    qDebug() << "not load qtBaseTranslator";    }
 
     QFile styleF;
 
