@@ -84,6 +84,7 @@ private slots:
     //void about();
     void writeData(const QByteArray &data);
     void readData();
+    void sendDataComport(const QByteArray &data);
 
     void handleError(QSerialPort::SerialPortError error);
     void handleBytesWritten(qint64 bytes);
@@ -126,6 +127,8 @@ private slots:
     void on_onOpenCsvSecretarStTwo_triggered();
 
     void on_onOpenCsvSecretarStFour_triggered();
+
+    void on_act_Sync_triggered();
 
 private:
     void initActionsConnections();

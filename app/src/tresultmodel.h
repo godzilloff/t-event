@@ -14,8 +14,9 @@ class TresultModel : public QAbstractTableModel
     Q_OBJECT
 public:
     enum ColNumTableResult {
-        CName = 0,
-        CSurname,
+        CSurname = 0,
+        CName,
+        CQual,
         CGroup,
         COrg,
         CBib,

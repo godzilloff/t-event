@@ -86,6 +86,7 @@ QJsonObject result::toJson() const
 QString result::getStrBackupResult()
 {
     return QDateTime::currentDateTime().toString("yyyy.MM.dd;HH:mm:ss;") +
+           QString::number(data.bib) + ";" +
            QString::number(data.card_number) + ";" +
            QTime::fromMSecsSinceStartOfDay(data.start_msec).toString("hh:mm:ss,z;")+
            QTime::fromMSecsSinceStartOfDay(data.finish_msec).toString("hh:mm:ss,z;")+

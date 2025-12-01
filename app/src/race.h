@@ -66,6 +66,7 @@ public:
 
     QString getNameFromBib(int number);
     QString getSurnameFromBib(int number);
+    QString getQualFromBib(int number);
     QString getFullNameFromBib(int number);
 
     const bool isBibFree(int bib);

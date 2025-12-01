@@ -12,6 +12,7 @@ struct st_comport_result{
     int32_t cardNum = 0;
     int32_t startMs = 0;
     int32_t finishMs = 0;
+    uint8_t checksum = 0;
 };
 #pragma pack(pop)
 

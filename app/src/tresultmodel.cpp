@@ -35,6 +35,7 @@ QVariant TresultModel::data(const QModelIndex &index, int role) const
             switch (index.column()) {
             case CName:     res = thisRace->getNameFromBib(bib); break;
             case CSurname:  res = thisRace->getSurnameFromBib(bib); break;
+            case CQual:     res = thisRace->getQualFromBib(bib); break;
             case CGroup:    res = thisRace->getNameGroupFromBib(bib); break;
             case COrg:      res = thisRace->getNameOrganizationFromBib(bib); break;
             case CBib:      res = QString::number(results_->at(index.row())->getBibResult()); break;
@@ -60,8 +61,9 @@ QVariant TresultModel::headerData(int section, Qt::Orientation orientation, int 
     {
         switch (section)
         {
-        case CName:     return QVariant(QString::fromUtf8("Фамилия"));
-        case CSurname:  return QVariant(QString::fromUtf8("Имя"));
+        case CSurname:  return QVariant(QString::fromUtf8("Фамилия"));
+        case CName:     return QVariant(QString::fromUtf8("Имя"));
+        case CQual:     return QVariant(QString::fromUtf8("Разряд"));
         case CGroup:    return QVariant(QString::fromUtf8("Группа"));
         case COrg:      return QVariant(QString::fromUtf8("Команда"));
         case CBib:      return QVariant(QString::fromUtf8("Номер"));

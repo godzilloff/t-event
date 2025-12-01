@@ -359,6 +359,15 @@ QString race::getSurnameFromBib(int number)
     return "";
 }
 
+QString race::getQualFromBib(int number)
+{
+    for(person* x: persons_){
+        if (x->getBib() == number)
+            return x->getQual();
+    }
+    return "";
+}
+
 QString race::getFullNameFromBib(int number)
 {
     for(person* x: persons_){
