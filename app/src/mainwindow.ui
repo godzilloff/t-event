@@ -107,7 +107,7 @@
      <x>0</x>
      <y>0</y>
      <width>1017</width>
-     <height>25</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu">
@@ -120,7 +120,7 @@
      </property>
      <widget class="QMenu" name="menu_SecretarST">
       <property name="title">
-       <string>Заличка из SecretarST</string>
+       <string>Заливка из SecretarST</string>
       </property>
       <addaction name="onOpenCsvSecretarStOne"/>
       <addaction name="onOpenCsvSecretarStTwo"/>
@@ -186,6 +186,8 @@
     <addaction name="act_comport_dialogset"/>
     <addaction name="act_connect_comport"/>
     <addaction name="act_disconnect_comport"/>
+    <addaction name="separator"/>
+    <addaction name="act_Sync"/>
     <addaction name="separator"/>
     <addaction name="act_online"/>
    </widget>
@@ -428,6 +430,11 @@
   <action name="onOpenCsvSecretarStFour">
    <property name="text">
     <string>группа</string>
+   </property>
+  </action>
+  <action name="act_Sync">
+   <property name="text">
+    <string>Синхронизировать время</string>
    </property>
   </action>
  </widget>
