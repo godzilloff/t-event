@@ -4,12 +4,15 @@
 #include <QApplication>
 #include <QFile>
 #include <QDir>
+#include <QSqlDatabase>
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
     QApplication::setEffectEnabled(Qt::UI_AnimateCombo, false);
     MainWindow w;
+
+    qDebug() << "Available SQL drivers:" << QSqlDatabase::drivers();
 
     QTranslator qtSerialTranslator;
     if (qtSerialTranslator.load("qtserialport_" + QLocale::system().name(),QDir::currentPath() + "/translations" ))
