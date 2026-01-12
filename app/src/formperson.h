@@ -3,10 +3,6 @@
 
 #include <QDialog>
 
-#include "person.h"
-
-#include "qsportevent.h"
-
 namespace Ui {
 class FormPerson;
 }
@@ -19,13 +15,8 @@ public:
     explicit FormPerson(QWidget *parent = nullptr);
     ~FormPerson();
 
-    void update_sevent(std::shared_ptr<QSportEvent> &pSEvent);
-
 signals:
     void requestSave();
-
-public slots:
-    void recieveDataFromMain(const st_person* data_);
 
 private slots:
     void onCheck_numCard(const QString &text);
@@ -33,7 +24,6 @@ private slots:
 private:
     Ui::FormPerson *ui;
 
-    std::shared_ptr<QSportEvent> ptrSEvent;
     QString id;
 
     void update_organization();

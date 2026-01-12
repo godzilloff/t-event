@@ -1,7 +1,3 @@
-// Copyright (C) 2012 Denis Shienkov <denis.shienkov@gmail.com>
-// Copyright (C) 2012 Laszlo Papp <lpapp@kde.org>
-// SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
-
 #include "settingsdialog.h"
 #include "ui_settingsdialog.h"
 
@@ -35,7 +31,6 @@ SettingsDialog::SettingsDialog(QWidget *parent) :
     fillPortsParameters();
     fillPortsInfo();
 
-    //updateSettings();
     loadSettingsFromIni();
 }
 

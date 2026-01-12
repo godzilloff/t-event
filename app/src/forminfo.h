@@ -3,8 +3,6 @@
 
 #include <QDialog>
 
-#include "race.h"
-
 namespace Ui {
 class FormInfo;
 }
@@ -18,10 +16,9 @@ public:
     ~FormInfo();
 
 public slots:
-    void recieveDataFromMain(const st_race& data_);
 
 private slots:
-    void on_buttonBox_accepted();
+    void onButtonBox_accepted();
 
 private:
     Ui::FormInfo *ui;

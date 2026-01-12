@@ -3,8 +3,6 @@
 
 #include <QDialog>
 
-#include "qsportevent.h"
-
 namespace Ui {
 class FormFilter;
 }
@@ -18,7 +16,6 @@ public:
     ~FormFilter();
 
 public slots:
-    void update_sevent(std::shared_ptr<QSportEvent> &pSEvent);
     void recieveDataFromMain();
     void updateStrOrg(int index);
     void updateStrGroup(int index);
@@ -28,7 +25,6 @@ private:
     QString org;
     QString group;
 
-    std::shared_ptr<QSportEvent> ptrSEvent;
     void update_organization();
     void update_group();
 };

@@ -11,12 +11,22 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 enable_testing()
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Test)
-find_package(Qt6 REQUIRED COMPONENTS Test)
-find_package(Qt6 REQUIRED COMPONENTS SerialPort)
-find_package(Qt6 REQUIRED COMPONENTS Network)
-find_package(Qt6 COMPONENTS Gui REQUIRED)
-find_package(Qt6 COMPONENTS Widgets REQUIRED)
+#find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Test)
+#find_package(Qt6 REQUIRED COMPONENTS Test)
+#find_package(Qt6 REQUIRED COMPONENTS SerialPort)
+#find_package(Qt6 REQUIRED COMPONENTS Network)
+#find_package(Qt6 COMPONENTS Gui REQUIRED)
+#find_package(Qt6 COMPONENTS Widgets REQUIRED)
+
+find_package(Qt6 REQUIRED COMPONENTS
+    Core
+    Test
+    Gui
+    Widgets
+    Sql
+    SerialPort
+    Network
+)
 
 add_executable(qtests tst_test.cpp
     ../app/src/course.cpp ../app/src/course.h
@@ -52,6 +62,7 @@ target_link_libraries(qtests PRIVATE
     Qt6::Test
     Qt6::Core
     Qt6::Gui
+    Qt6::Sql
     Qt6::Widgets
     Qt6::SerialPort
     Qt6::Network

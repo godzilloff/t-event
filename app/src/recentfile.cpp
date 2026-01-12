@@ -31,7 +31,8 @@ void MainWindow::createMenus(){
 void MainWindow::openRecent(){
     QAction *action = qobject_cast<QAction *>(sender());
     if (action)
-        open_JSON(action->data().toString());
+        //open_JSON(action->data().toString());
+        OpenTEvent(action->data().toString());
 }
 
 void MainWindow::adjustForCurrentFile(const QString &filePath){
@@ -50,7 +51,7 @@ void MainWindow::adjustForCurrentFile(const QString &filePath){
     // see note
     updateRecentActionList();
     notNeedSave();
-    //updateWindowTitle();
+    updateWindowTitle();
 }
 
 void MainWindow::needSave(){
@@ -63,12 +64,12 @@ void MainWindow::notNeedSave(){
     updateWindowTitle();
 }
 
-void MainWindow::updateWindowTitle(){
-    QString ch_need_save = (flag_need_save)? "*" : "";
-    QString path = (!currentFilePath.isEmpty()) ? currentFilePath : " ... ";
-    QString title = pSEvent->getNameEvent() + QString{" ["}+path+ch_need_save+QString{"] - T-Event 0.5.1"};
-    this->setWindowTitle(title.trimmed());
-}
+// void MainWindow::updateWindowTitle(){
+//     // QString ch_need_save = (flag_need_save)? "*" : "";
+//     // QString path = (!currentFilePath.isEmpty()) ? currentFilePath : " ... ";
+//     // QString title = pSEvent->getNameEvent() + QString{" ["}+path+ch_need_save+QString{"] - T-Event 0.5.1"};
+//     // this->setWindowTitle(title.trimmed());
+// }
 
 void MainWindow::updateRecentActionList(){
     QSettings settings("recentfile.ini", QSettings::IniFormat);

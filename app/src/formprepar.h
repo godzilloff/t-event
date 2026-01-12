@@ -3,8 +3,6 @@
 
 #include <QDialog>
 
-#include "qsportevent.h"
-
 namespace Ui {
 class FormPrepar;
 }
@@ -17,12 +15,8 @@ public:
     explicit FormPrepar(QWidget *parent = nullptr);
     ~FormPrepar();
 
-    void update_sevent(std::shared_ptr<QSportEvent> &pSEvent);
-
 private:
     Ui::FormPrepar *ui;
-
-    std::shared_ptr<QSportEvent> ptrSEvent;
 
     void onSetBib();
     void onClearAllCardNum();
