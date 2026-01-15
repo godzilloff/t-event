@@ -221,6 +221,9 @@
    <addaction name="act_open"/>
    <addaction name="act_info"/>
    <addaction name="act_connect_comport"/>
+   <addaction name="separator"/>
+   <addaction name="act_undo"/>
+   <addaction name="act_redo"/>
   </widget>
   <action name="act_new">
    <property name="icon">
@@ -435,6 +438,42 @@
   <action name="act_Sync">
    <property name="text">
     <string>Синхронизировать время</string>
+   </property>
+  </action>
+  <action name="act_undo">
+   <property name="icon">
+    <iconset resource="../resource.qrc">
+     <normaloff>:/rec/img/undo.svg</normaloff>:/rec/img/undo.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Отменить</string>
+   </property>
+   <property name="toolTip">
+    <string>Отменить последнее действие (Ctrl+Z)</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Z</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::NoRole</enum>
+   </property>
+  </action>
+  <action name="act_redo">
+   <property name="icon">
+    <iconset resource="../resource.qrc">
+     <normaloff>:/rec/img/redo.svg</normaloff>:/rec/img/redo.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Вернуть</string>
+   </property>
+   <property name="toolTip">
+    <string>Вернуть отмененное действие (Ctrl+Y)</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Y</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::NoRole</enum>
    </property>
   </action>
  </widget>

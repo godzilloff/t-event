@@ -114,7 +114,6 @@ MainWindow::MainWindow(QWidget *parent)
     setupTimerStatusBar();
     //setupConnections();
     //setupConnectionsComport();
-    setupToolbars();
     setupMenuBar();
 
     createActionsAndConnections();
@@ -260,16 +259,19 @@ void MainWindow::keyPressEvent(QKeyEvent *e)
     // Undo/Redo через клавиатуру
     if (e->key() == Qt::Key_Z && e->modifiers() & Qt::ControlModifier) {
         if (e->modifiers() & Qt::ShiftModifier) {
-            onRedo(); // Ctrl+Shift+Z = Redo
+            // onRedo(); // Ctrl+Shift+Z = Redo
+            on_act_redo_triggered();
         } else {
-            onUndo(); // Ctrl+Z = Undo
+            // onUndo(); // Ctrl+Z = Undo
+            on_act_undo_triggered();
         }
         e->accept();
         return;
     }
 
     if (e->key() == Qt::Key_Y && e->modifiers() & Qt::ControlModifier) {
-        onRedo(); // Ctrl+Y = Redo
+        // onRedo(); // Ctrl+Y = Redo
+        on_act_redo_triggered();
         e->accept();
         return;
     }
@@ -1691,40 +1693,6 @@ void MainWindow::clearModels()
     qDebug() << "Модели очищены";
 }
 
-void MainWindow::setupToolbars()
-{
-    // Настройка тулбара (если нужно)
-
-    // Создаем тулбар для undo/redo
-    QToolBar* editToolbar = addToolBar(tr("Редактирование"));
-    editToolbar->setObjectName("editToolbar");
-
-    // Кнопка Undo
-    QAction* undoAction = UndoStack::instance().createUndoAction(this);
-    undoAction->setIcon(QIcon::fromTheme("edit-undo", QIcon(":/icons/undo.png")));
-    undoAction->setShortcut(QKeySequence::Undo);
-    undoAction->setText(tr("Отменить"));
-    undoAction->setToolTip(tr("Отменить последнее действие (Ctrl+Z)"));
-    editToolbar->addAction(undoAction);
-
-    // Кнопка Redo
-    QAction* redoAction = UndoStack::instance().createRedoAction(this);
-    redoAction->setIcon(QIcon::fromTheme("edit-redo", QIcon(":/icons/redo.png")));
-    redoAction->setShortcut(QKeySequence::Redo);
-    redoAction->setText(tr("Вернуть"));
-    redoAction->setToolTip(tr("Вернуть отмененное действие (Ctrl+Y)"));
-    editToolbar->addAction(redoAction);
-
-    editToolbar->addSeparator();
-
-    // Добавляем в меню
-    ui->menu_2->addAction(undoAction);
-    ui->menu_2->addAction(redoAction);
-
-    // Соединяем с нашими слотами (опционально)
-    connect(undoAction, &QAction::triggered, this, &MainWindow::onUndo);
-    connect(redoAction, &QAction::triggered, this, &MainWindow::onRedo);
-}
 
 void MainWindow::setupMenuBar()
 {
@@ -2010,7 +1978,8 @@ void MainWindow::onCloseDocument()
 //     UndoStack::instance().redo();
 // }
 
-void MainWindow::onUndo()
+
+void MainWindow::on_act_undo_triggered()
 {
     if (UndoStack::instance().canUndo()) {
         UndoStack::instance().undo();
@@ -2019,7 +1988,8 @@ void MainWindow::onUndo()
     }
 }
 
-void MainWindow::onRedo()
+
+void MainWindow::on_act_redo_triggered()
 {
     if (UndoStack::instance().canRedo()) {
         UndoStack::instance().redo();
@@ -2027,6 +1997,15 @@ void MainWindow::onRedo()
         updateStatusBar();
     }
 }
+
+
+// void MainWindow::onUndo()
+// {
+// }
+
+// void MainWindow::onRedo()
+// {
+// }
 
 void MainWindow::onAddRecord()
 {

@@ -15,13 +15,16 @@ DatabaseCommand::DatabaseCommand(CommandType type, const QString& tableName,
 {
     switch (type) {
     case Insert:
-        setText(QObject::tr("Insert into %1").arg(tableName));
+        if (tableName == "participants") setText(QObject::tr("Добавлен(а) %1").arg(newData["full_name"].toString()));
+        else setText(QObject::tr("Insert into %1").arg(tableName));
         break;
     case Update:
-        setText(QObject::tr("Update %1").arg(tableName));
+        if (tableName == "participants") setText(QObject::tr("Обновлён(а) %1").arg(newData["full_name"].toString()));
+        else setText(QObject::tr("Update %1").arg(tableName));
         break;
     case Delete:
-        setText(QObject::tr("Delete from %1").arg(tableName));
+        if (tableName == "participants") setText(QObject::tr("Удален(а) %1").arg(oldData["full_name"].toString()));
+        else setText(QObject::tr("Delete from %1").arg(tableName));
         break;
     }
 }

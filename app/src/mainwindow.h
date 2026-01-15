@@ -81,8 +81,10 @@ private slots:
     void onCloseDocument();
 
     // Undo/Redo
-    void onUndo();
-    void onRedo();
+    // void onUndo();
+    // void onRedo();
+    void on_act_undo_triggered();
+    void on_act_redo_triggered();
 
     // Работа с записями
     void onAddRecord();
@@ -133,6 +135,7 @@ private slots:
     // void onRecordDeleted(const QString& tableName, qint64 id);
     // void onCompetitionChanged(qint64 competitionId);
 
+
 private:
     // Инициализация
     void initActionsConnections();
@@ -142,7 +145,6 @@ private:
     void setupTimerStatusBar();
     void setupConnections();
     //void setupConnectionsComport();
-    void setupToolbars();
     void setupMenuBar();
     void initializeForDocument();
     void closeCurrentDocument();
