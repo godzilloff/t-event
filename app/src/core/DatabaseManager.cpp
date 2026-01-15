@@ -22,6 +22,10 @@ DatabaseManager::DatabaseManager(QObject* parent) : QObject(parent) {}
 DatabaseManager::~DatabaseManager()
 {
     closeDatabase();
+    // Дополнительная проверка на всякий случай
+    if (!m_connectionName.isEmpty()) {
+        QSqlDatabase::removeDatabase(m_connectionName);
+    }
 }
 
 bool DatabaseManager::initialize(const QString& databasePath)
@@ -52,11 +56,15 @@ bool DatabaseManager::openDatabase(const QString& databasePath)
     // Проверяем, существует ли файл
     bool fileExists = QFile::exists(databasePath);
 
+    m_connectionName = QUuid::createUuid().toString();
     m_db = QSqlDatabase::addDatabase("QSQLITE", QUuid::createUuid().toString());
     m_db.setDatabaseName(databasePath);
 
     if (!m_db.open()) {
         qCritical() << "Cannot open database:" << m_db.lastError().text();
+        // Удаляем соединение, если не удалось открыть базу
+        QSqlDatabase::removeDatabase(m_connectionName);
+        m_connectionName.clear();
         emit databaseError(m_db.lastError().text());
         return false;
     }
@@ -101,6 +109,12 @@ void DatabaseManager::closeDatabase()
         // Оптимизация перед закрытием
         QSqlQuery query(m_db);
         query.exec("PRAGMA optimize");
+
+        // Удаляем соединение из Qt
+        if (!m_connectionName.isEmpty()) {
+            QSqlDatabase::removeDatabase(m_connectionName);
+            m_connectionName.clear();
+        }
 
         m_db.close();
         emit databaseClosed();
@@ -693,6 +707,13 @@ void DatabaseManager::reset()
 {
     cleanup(); // Закрыть базу, очистить кэши и т.д.
     m_currentCompetitionId = -1;
+
+    // Убедиться, что соединение удалено
+    if (!m_connectionName.isEmpty()) {
+        QSqlDatabase::removeDatabase(m_connectionName);
+        m_connectionName.clear();
+    }
+
     m_db = QSqlDatabase(); // Сброс объекта базы данных
 }
 

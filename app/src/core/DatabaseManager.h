@@ -83,6 +83,7 @@ private:
     QSqlDatabase m_db;
     qint64 m_currentCompetitionId = -1;
     QString m_databasePath;
+    QString m_connectionName;
 
     Q_DISABLE_COPY(DatabaseManager)
 };
