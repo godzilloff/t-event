@@ -116,7 +116,8 @@ bool Document::save()
     }
 
     if (m_filePath.isEmpty()) {
-        return saveAs(m_filePath);
+        qWarning() << "Не задан путь для сохранения файла!";
+        return false;
     }
 
     // Для SQLite сохранение происходит автоматически
