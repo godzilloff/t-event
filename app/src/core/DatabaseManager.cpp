@@ -17,13 +17,18 @@ DatabaseManager& DatabaseManager::instance()
     return instance;
 }
 
-DatabaseManager::DatabaseManager(QObject* parent) : QObject(parent) {}
+DatabaseManager::DatabaseManager(QObject* parent)
+    : QObject(parent)
+    , m_connectionName("ConnectName")
+{}
 
 DatabaseManager::~DatabaseManager()
 {
     closeDatabase();
     // Дополнительная проверка на всякий случай
     if (!m_connectionName.isEmpty()) {
+        m_db.close();
+        m_db = QSqlDatabase();
         QSqlDatabase::removeDatabase(m_connectionName);
     }
 }
@@ -56,11 +61,12 @@ bool DatabaseManager::openDatabase(const QString& databasePath)
     // Проверяем, существует ли файл
     bool fileExists = QFile::exists(databasePath);
 
-    m_connectionName = QUuid::createUuid().toString();
-    m_db = QSqlDatabase::addDatabase("QSQLITE", QUuid::createUuid().toString());
+    m_db = QSqlDatabase::addDatabase("QSQLITE", m_connectionName);
     m_db.setDatabaseName(databasePath);
 
     if (!m_db.open()) {
+        m_db.close();
+        m_db = QSqlDatabase();
         qCritical() << "Cannot open database:" << m_db.lastError().text();
         // Удаляем соединение, если не удалось открыть базу
         QSqlDatabase::removeDatabase(m_connectionName);
@@ -112,11 +118,14 @@ void DatabaseManager::closeDatabase()
 
         // Удаляем соединение из Qt
         if (!m_connectionName.isEmpty()) {
+
+            m_db.close();
+            m_db = QSqlDatabase();
             QSqlDatabase::removeDatabase(m_connectionName);
             m_connectionName.clear();
         }
 
-        m_db.close();
+        //m_db.close();
         emit databaseClosed();
     }
 }
@@ -710,11 +719,14 @@ void DatabaseManager::reset()
 
     // Убедиться, что соединение удалено
     if (!m_connectionName.isEmpty()) {
+
+        //m_db.close();
+        m_db = QSqlDatabase();
         QSqlDatabase::removeDatabase(m_connectionName);
         m_connectionName.clear();
     }
 
-    m_db = QSqlDatabase(); // Сброс объекта базы данных
+    //m_db = QSqlDatabase(); // Сброс объекта базы данных
 }
 
 void DatabaseManager::cleanup()
