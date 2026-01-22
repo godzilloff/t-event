@@ -22,8 +22,17 @@ public:
     void closeDatabase();
 
     bool isOpen() const { return m_db.isOpen(); }
-    QSqlDatabase database() const { return m_db; }
+    //QSqlDatabase database() const { return m_db; }
     QString databasePath() const { return m_db.databaseName(); }
+
+    template<typename Func>
+    auto withDatabase(Func&& func) -> decltype(func(std::declval<QSqlDatabase&>()))
+    {
+        if (!m_db.isOpen()) {
+            throw std::runtime_error("Database is not open");
+        }
+        return func(m_db);
+    }
 
     void reset(); // Метод для полного сброса состояния
     void setDatabasePath(const QString& path); // Явная установка пути
@@ -83,7 +92,7 @@ private:
     QSqlDatabase m_db;
     qint64 m_currentCompetitionId = -1;
     QString m_databasePath;
-    QString m_connectionName;
+    QString m_connectionName = "DatabaseManagerConnection";
 
     Q_DISABLE_COPY(DatabaseManager)
 };

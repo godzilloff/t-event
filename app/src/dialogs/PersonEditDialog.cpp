@@ -239,79 +239,90 @@ void PersonEditDialog::setupComboBoxes()
         return;
     }
 
-    auto& db = DatabaseManager::instance();
+    auto& dbManager = DatabaseManager::instance();
     qint64 competitionId = m_document->competitionId();
 
     qDebug() << "PersonEditDialog: Настраиваю ComboBox для competition_id:" << competitionId;
 
-    // Делегации
-    m_delegationsModel = new QSqlTableModel(this, db.database());
-    m_delegationsModel->setTable("delegations");
+    try {
+        // Делегации
+        dbManager.withDatabase([this, competitionId](const QSqlDatabase& db) {
+            m_delegationsModel = new QSqlTableModel(this, db);
+            m_delegationsModel->setTable("delegations");
 
-    if (competitionId > 0) {
-        QString filter = QString("competition_id = %1").arg(competitionId);
-        m_delegationsModel->setFilter(filter);
-        qDebug() << "PersonEditDialog: Установлен фильтр для делегаций:" << filter;
+            if (competitionId > 0) {
+                QString filter = QString("competition_id = %1").arg(competitionId);
+                m_delegationsModel->setFilter(filter);
+                qDebug() << "PersonEditDialog: Установлен фильтр для делегаций:" << filter;
+            }
+
+            m_delegationsModel->setSort(m_delegationsModel->fieldIndex("name"), Qt::AscendingOrder);
+
+            if (!m_delegationsModel->select()) {
+                qWarning() << "PersonEditDialog: Ошибка загрузки делегаций:"
+                           << m_delegationsModel->lastError().text();
+            } else {
+                qDebug() << "PersonEditDialog: Загружено делегаций:" << m_delegationsModel->rowCount();
+            }
+
+            m_comboDelegation->setModel(m_delegationsModel);
+            m_comboDelegation->setModelColumn(m_delegationsModel->fieldIndex("name"));
+            m_comboDelegation->setCurrentIndex(-1);
+        });
+
+        // Дистанции
+        dbManager.withDatabase([this, competitionId](const QSqlDatabase& db) {
+            m_distancesModel = new QSqlTableModel(this, db);
+            m_distancesModel->setTable("distances");
+
+            if (competitionId > 0) {
+                QString filter = QString("competition_id = %1").arg(competitionId);
+                m_distancesModel->setFilter(filter);
+                qDebug() << "PersonEditDialog: Установлен фильтр для дистанций:" << filter;
+            }
+
+            m_distancesModel->setSort(m_distancesModel->fieldIndex("name"), Qt::AscendingOrder);
+
+            if (!m_distancesModel->select()) {
+                qWarning() << "PersonEditDialog: Ошибка загрузки дистанций:"
+                           << m_distancesModel->lastError().text();
+            } else {
+                qDebug() << "PersonEditDialog: Загружено дистанций:" << m_distancesModel->rowCount();
+            }
+
+            m_comboDistance->setModel(m_distancesModel);
+            m_comboDistance->setModelColumn(m_distancesModel->fieldIndex("name"));
+            m_comboDistance->setCurrentIndex(-1);
+        });
+
+        // Возрастные группы
+        dbManager.withDatabase([this, competitionId](const QSqlDatabase& db) {
+            m_ageGroupsModel = new QSqlTableModel(this, db);
+            m_ageGroupsModel->setTable("age_groups");
+
+            if (competitionId > 0) {
+                QString filter = QString("competition_id = %1").arg(competitionId);
+                m_ageGroupsModel->setFilter(filter);
+                qDebug() << "PersonEditDialog: Установлен фильтр для возрастных групп:" << filter;
+            }
+
+            m_ageGroupsModel->setSort(m_ageGroupsModel->fieldIndex("name"), Qt::AscendingOrder);
+
+            if (!m_ageGroupsModel->select()) {
+                qWarning() << "PersonEditDialog: Ошибка загрузки возрастных групп:"
+                           << m_ageGroupsModel->lastError().text();
+            } else {
+                qDebug() << "PersonEditDialog: Загружено возрастных групп:" << m_ageGroupsModel->rowCount();
+            }
+
+            m_comboAgeGroup->setModel(m_ageGroupsModel);
+            m_comboAgeGroup->setModelColumn(m_ageGroupsModel->fieldIndex("name"));
+            m_comboAgeGroup->setCurrentIndex(-1);
+        });
+
+    } catch (const std::exception& e) {
+        qWarning() << "PersonEditDialog: Ошибка при настройке ComboBox:" << e.what();
     }
-
-    m_delegationsModel->setSort(m_delegationsModel->fieldIndex("name"), Qt::AscendingOrder);
-
-    if (!m_delegationsModel->select()) {
-        qWarning() << "PersonEditDialog: Ошибка загрузки делегаций:"
-                   << m_delegationsModel->lastError().text();
-    } else {
-        qDebug() << "PersonEditDialog: Загружено делегаций:" << m_delegationsModel->rowCount();
-    }
-
-    m_comboDelegation->setModel(m_delegationsModel);
-    m_comboDelegation->setModelColumn(m_delegationsModel->fieldIndex("name"));
-    m_comboDelegation->setCurrentIndex(-1);
-
-    // Дистанции
-    m_distancesModel = new QSqlTableModel(this, db.database());
-    m_distancesModel->setTable("distances");
-
-    if (competitionId > 0) {
-        QString filter = QString("competition_id = %1").arg(competitionId);
-        m_distancesModel->setFilter(filter);
-        qDebug() << "PersonEditDialog: Установлен фильтр для дистанций:" << filter;
-    }
-
-    m_distancesModel->setSort(m_distancesModel->fieldIndex("name"), Qt::AscendingOrder);
-
-    if (!m_distancesModel->select()) {
-        qWarning() << "PersonEditDialog: Ошибка загрузки дистанций:"
-                   << m_distancesModel->lastError().text();
-    } else {
-        qDebug() << "PersonEditDialog: Загружено дистанций:" << m_distancesModel->rowCount();
-    }
-
-    m_comboDistance->setModel(m_distancesModel);
-    m_comboDistance->setModelColumn(m_distancesModel->fieldIndex("name"));
-    m_comboDistance->setCurrentIndex(-1);
-
-    // Возрастные группы
-    m_ageGroupsModel = new QSqlTableModel(this, db.database());
-    m_ageGroupsModel->setTable("age_groups");
-
-    if (competitionId > 0) {
-        QString filter = QString("competition_id = %1").arg(competitionId);
-        m_ageGroupsModel->setFilter(filter);
-        qDebug() << "PersonEditDialog: Установлен фильтр для возрастных групп:" << filter;
-    }
-
-    m_ageGroupsModel->setSort(m_ageGroupsModel->fieldIndex("name"), Qt::AscendingOrder);
-
-    if (!m_ageGroupsModel->select()) {
-        qWarning() << "PersonEditDialog: Ошибка загрузки возрастных групп:"
-                   << m_ageGroupsModel->lastError().text();
-    } else {
-        qDebug() << "PersonEditDialog: Загружено возрастных групп:" << m_ageGroupsModel->rowCount();
-    }
-
-    m_comboAgeGroup->setModel(m_ageGroupsModel);
-    m_comboAgeGroup->setModelColumn(m_ageGroupsModel->fieldIndex("name"));
-    m_comboAgeGroup->setCurrentIndex(-1);
 }
 
 void PersonEditDialog::loadData()

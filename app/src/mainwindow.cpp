@@ -359,17 +359,9 @@ void MainWindow::setupModels()
 {
     qDebug() << "\n=== СОЗДАНИЕ МОДЕЛЕЙ ===";
 
-    // Очищаем старые модели если есть
-    clearModels();
+    clearModels();      // Очищаем старые модели если есть
 
-    // Получаем базу данных
-    auto& dbManager = DatabaseManager::instance();
-    QSqlDatabase db = dbManager.database();
-
-    if (!db.isOpen()) {
-        qDebug() << "ОШИБКА: База данных не открыта!";
-        return;
-    }
+    auto& dbManager = DatabaseManager::instance();     // Получаем базу данных
 
     // Создаем модели для всех таблиц
     QStringList tables = {"participants", "delegations", "distances", "age_groups", "results"};
@@ -377,30 +369,31 @@ void MainWindow::setupModels()
     for (const QString& tableName : tables) {
         qDebug() << "Создаю модель для:" << tableName;
 
-        // 1. Создаем SqlTableModel
-        SqlTableModel* model = new SqlTableModel(this, db);
+        SqlTableModel* model = nullptr;
 
-        // ВАЖНО: Для participants используем VIEW вместо таблицы!
-        if (tableName == "participants") {
-            model->setTable("v_participants_details"); // Используем VIEW!
-        } else {
-            model->setTable(tableName);
-        }
+        dbManager.withDatabase([&](const QSqlDatabase& db) -> bool {
+            model = new SqlTableModel(this, db);
 
-        // 2. Настраиваем заголовки столбцов
-        setupColumnHeaders(model, tableName);
+            if (tableName == "participants") {
+                model->setTable("v_participants_details");
+            } else {
+                model->setTable(tableName);
+            }
 
-        // 3. Скрываем ненужные столбцы
-        setupHiddenColumns(model, tableName);
+            setupColumnHeaders(model, tableName);
+            setupHiddenColumns(model, tableName);
+            model->setEditStrategy(QSqlTableModel::OnManualSubmit);
 
-        // 4. Устанавливаем стратегию редактирования
-        model->setEditStrategy(QSqlTableModel::OnManualSubmit);
+            return true;
+        });
 
-        // 5. Создаем FilterProxyModel
+        if (!model) continue;
+
+        // Создаем FilterProxyModel
         FilterProxyModel* proxy = new FilterProxyModel(this);
         proxy->setSourceModel(model);
 
-        // 6. Сохраняем
+        // Сохраняем
         m_tableModels[tableName] = model;
         m_proxyModels[tableName] = proxy;
 
@@ -429,10 +422,10 @@ void MainWindow::setupModels()
         qDebug() << "  Создана модель и прокси для" << tableName;
     }
 
-    // 7. Связываем с виджетами ОДИН РАЗ
+    // Связываем с виджетами
     connectModelsToWidgets();
 
-    // 8. Только после связывания устанавливаем фильтры и вызываем select()
+    // Только после связывания устанавливаем фильтры и вызываем select()
     if (m_document && m_document->isOpen()) {
         qint64 competitionId = m_document->competitionId();
         qDebug() << "Устанавливаю фильтры competition_id =" << competitionId;
@@ -728,59 +721,6 @@ void MainWindow::setupTableViewHeaders()
     ui->tableOrg->resizeColumnsToContents();
 
     // Аналогично для других таблиц
-}
-
-void MainWindow::debugTableStructure(const QString& tableName)
-{
-    if (!m_tableModels.contains(tableName)) {
-        qDebug() << "Модель для таблицы" << tableName << "не найдена";
-        return;
-    }
-
-    // Выполним прямой SQL запрос для сравнения
-    auto& dbManager = DatabaseManager::instance();
-    QString sql = QString("SELECT * FROM %1 LIMIT 1").arg(tableName);
-
-    QSqlQuery query(dbManager.database());
-    if (query.exec(sql) && query.next()) {
-        qDebug() << "=== ПРЯМОЙ SQL ЗАПРОС для" << tableName << "===";
-        QSqlRecord rec = query.record();
-        for (int i = 0; i < rec.count(); ++i) {
-            qDebug() << "  Поле" << i << "->" << rec.fieldName(i)
-                     << ":" << rec.value(i).toString();
-        }
-    }
-
-    SqlTableModel* model = m_tableModels[tableName];
-    qDebug() << "=== Структура таблицы" << tableName << "===";
-    qDebug() << "Количество столбцов:" << model->columnCount();
-
-    for (int i = 0; i < model->columnCount(); ++i) {
-        QString fieldName = model->headerData(i, Qt::Horizontal).toString();
-        qDebug() << "  Колонка" << i << "->" << fieldName;
-
-        // Проверяем, есть ли отношение
-        if (model->relation(i).isValid()) {
-            QSqlRelation rel = model->relation(i);
-            qDebug() << "    Это связанное поле:";
-            qDebug() << "      Таблица:" << rel.tableName();
-            qDebug() << "      Ключ:" << rel.indexColumn();
-            qDebug() << "      Отображение:" << rel.displayColumn();
-        }
-    }
-
-    // Проверим несколько первых строк
-    int rowsToCheck = qMin(3, model->rowCount());
-    qDebug() << "Первые" << rowsToCheck << "строк данных:";
-
-    for (int row = 0; row < rowsToCheck; ++row) {
-        qDebug() << "  Строка" << row << ":";
-        for (int col = 0; col < model->columnCount(); ++col) {
-            QVariant data = model->data(model->index(row, col));
-            QString fieldName = model->headerData(col, Qt::Horizontal).toString();
-            qDebug() << "    " << fieldName << ":" << data.toString();
-        }
-    }
 }
 
 void MainWindow::refreshAllTables()
@@ -1217,7 +1157,7 @@ void MainWindow::setupConnections()
     connect(ui->tabWidget, &QTabWidget::currentChanged, this, &MainWindow::onTabChanged);
 
     // Подключаем двойной клик для всех таблиц
-    connect(ui->tablePerson, &QTableView::doubleClicked, this, &MainWindow::onDoubleClickRecord);
+    connect(ui->tablePerson, &QTableView::doubleClicked, this, &MainWindow::onDoubleClickRecord,Qt::UniqueConnection);
     connect(ui->tableResult, &QTableView::doubleClicked, this, &MainWindow::onDoubleClickRecord);
     connect(ui->tableGroup, &QTableView::doubleClicked, this, &MainWindow::onDoubleClickRecord);
     connect(ui->tableDist, &QTableView::doubleClicked, this, &MainWindow::onDoubleClickRecord);
@@ -2113,6 +2053,7 @@ void MainWindow::onDoubleClickRecord(const QModelIndex& index)
     if (!m_document || !m_document->isOpen() || !index.isValid()) {
         return;
     }
+    qDebug() << "Слот вызван, sender:" << sender();
 
     // Получаем текущую вкладку для определения таблицы
     int currentTab = ui->tabWidget->currentIndex();

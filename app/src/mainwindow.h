@@ -160,8 +160,6 @@ private:
     void setupDelegates();
     void updateCompetitionFilters();
 
-    void debugTableStructure(const QString& tableName);
-
     // Работа с данными
     //void checkAndInitDatabase();
     //void checkViewStructure();
