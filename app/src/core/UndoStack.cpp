@@ -13,6 +13,10 @@ DatabaseCommand::DatabaseCommand(CommandType type, const QString& tableName,
     , m_newData(newData)
     , m_oldData(oldData)
 {
+    if (m_type == Insert && !m_newData.contains("id")) {
+        m_newData["id"] = m_id; // фиксируем id для redo
+    }
+
     switch (type) {
     case Insert:
         if (tableName == "participants") setText(QObject::tr("Добавлен(а) %1").arg(newData["full_name"].toString()));
@@ -135,7 +139,17 @@ void BatchImportCommand::redo()
 
     // Восстанавливаем удаленные записи
     for (int i = 0; i < m_importedIds.size(); ++i) {
-        db.createRecord(m_tableName, m_importedData[i]);
+        auto data = m_importedData[i];
+        data["id"] = m_importedIds[i];
+
+        qint64 newId = -1;
+        bool ok = db.createRecord(m_tableName, data, &newId);
+        if (!ok) {
+            qDebug() << "  Restoring record with id =" << m_importedIds[i] << ", data keys:" << data.keys();
+            qWarning() << "Failed to restore record with id" << m_importedIds[i];
+        } else if (newId != m_importedIds[i]) {
+            qWarning() << "ID mismatch! Expected:" << m_importedIds[i] << "Got:" << newId;
+        }
     }
 }
 
