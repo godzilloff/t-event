@@ -13,6 +13,10 @@
 #include "dialogs/DistanceEditDialog.h"
 #include "dialogs/AgeGroupEditDialog.h"
 
+#include "serial/isportident_interface.h"
+#include "serial/sportident_station.h"
+#include "serial/sportident_types.h"
+
 #include "CsvImporter.h"
 #include <QFileDialog>
 #include <QProgressDialog>
@@ -33,7 +37,6 @@
 #include <QMessageBox>
 #include <QTimer>
 #include <QLabel>
-//#include <chrono>
 #include <QByteArrayView>
 #include <QEvent.h>
 
@@ -61,16 +64,6 @@
 
 #include <QStandardPaths>
 
-// static const QMap<QString, QString> TABLE_DISPLAY_NAMES = {
-//     {"participants", ("Участники")},
-//     {"delegations", ("Делегации")},
-//     {"distances", ("Дистанции")},
-//     {"age_groups", ("Возрастные группы")},
-//     {"results", ("Результаты")}
-// };
-
-//static constexpr std::chrono::seconds kWriteTimeout = std::chrono::seconds{5};
-
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
     ui(new Ui::MainWindow),
@@ -85,10 +78,10 @@ MainWindow::MainWindow(QWidget *parent)
     clock_timer(new QTimer(this)),
     comport(new QSerialPort(this)),
     postSender(new PostRequestSender(this)),
+    m_siStation(new SportIdent::SportIdentStation(this)),
     maxFileNr(4),
     flag_need_save(false),
     m_document(nullptr),
-    //m_document(new Document(this)),
     m_csvImporter(new CsvImporter(this)),
     m_modelsInitialized(false),
     m_tablesConnected(false),
@@ -113,7 +106,7 @@ MainWindow::MainWindow(QWidget *parent)
     setupUi();
     setupTimerStatusBar();
     //setupConnections();
-    //setupConnectionsComport();
+    setupConnectionsComport();
     setupMenuBar();
 
     createActionsAndConnections();
@@ -1121,25 +1114,6 @@ void MainWindow::initActionsConnections()
             this, &MainWindow::onCsvImportError);
 }
 
-// void MainWindow::setupConnections()
-// {
-//     // Документ
-//     connect(m_document, &Document::documentOpened, this, &MainWindow::onDocumentOpened);
-//     connect(m_document, &Document::documentClosed, this, &MainWindow::onDocumentClosed);
-//     connect(m_document, &Document::documentModified, this, &MainWindow::onDocumentModified);
-//     // connect(m_document, &Document::recordInserted, this, &MainWindow::onRecordInserted);
-//     // connect(m_document, &Document::recordUpdated, this, &MainWindow::onRecordUpdated);
-//     // connect(m_document, &Document::recordDeleted, this, &MainWindow::onRecordDeleted);
-//     // connect(m_document, &Document::competitionChanged, this, &MainWindow::onCompetitionChanged);
-
-//     // Вкладки
-//     connect(ui->tabWidget, &QTabWidget::currentChanged, this, &MainWindow::onTabChanged);
-
-//     // Таблица
-//     //connect(ui->tablePerson, &QTableView::doubleClicked, this, &MainWindow::onTablePerson_dblclk);
-//     //connect(ui->tableResult, &QTableView::doubleClicked, this, &MainWindow::onTableResult_dblclk);
-// }
-
 void MainWindow::setupConnections()
 {
     // Проверяем, что документ создан
@@ -1167,40 +1141,199 @@ void MainWindow::setupConnections()
     //connect(ui->searchEdit, &QLineEdit::textChanged, this, &MainWindow::onSearchTextChanged);
 }
 
-// void MainWindow::setupConnectionsComport(){
-//     QObject::connect(comport, &QSerialPort::errorOccurred, this, &MainWindow::handleError);
-//     QObject::connect(comport_timer, &QTimer::timeout, this, &MainWindow::handleWriteTimeout);
-//     comport_timer->setSingleShot(true);
+void MainWindow::setupConnectionsComport(){
+    // Кнопки
+    connect(ui->act_connect_comport, &QAction::triggered, this, &MainWindow::onConnectClicked);
 
-//     QObject::connect(comport, &QSerialPort::readyRead, this, &MainWindow::readData);
-//     QObject::connect(comport, &QSerialPort::bytesWritten, this, &MainWindow::handleBytesWritten);
-// }
+    // Сигналы от станции
+    connect(m_siStation.data(), &SportIdent::ISportIdentInterface::stationConnected,
+            this, &MainWindow::onStationConnected);
+    connect(m_siStation.data(), &SportIdent::ISportIdentInterface::cardDetected,
+            this, &MainWindow::onCardDetected);
+    connect(m_siStation.data(), &SportIdent::ISportIdentInterface::cardReadComplete,
+            this, &MainWindow::onCardReadComplete);
+    connect(m_siStation.data(), &SportIdent::ISportIdentInterface::cardRemoved,
+            this, &MainWindow::onCardRemoved);
+    connect(m_siStation.data(), &SportIdent::ISportIdentInterface::errorOccurred,
+            this, &MainWindow::onErrorOccurred);
+    connect(m_siStation.data(), &SportIdent::ISportIdentInterface::debugMessage,
+            this, &MainWindow::onDebugMessage);
+}
 
-// void MainWindow::connectModelsToWidgets()
-// {
-//     qDebug() << "Связываю модели с виджетами...";
+void MainWindow::on_act_comport_dialogset_triggered(){
+    ui_com_settings->show();
+}
 
-//     if (m_proxyModels.contains("participants")) {
-//         ui->tablePerson->setModel(m_proxyModels["participants"]);
-//         qDebug() << "  participants → tablePerson";
-//     }
-//     if (m_proxyModels.contains("results")) {
-//         ui->tableResult->setModel(m_proxyModels["results"]);
-//         qDebug() << "  results → tableResult";
-//     }
-//     if (m_proxyModels.contains("age_groups")) {
-//         ui->tableGroup->setModel(m_proxyModels["age_groups"]);
-//         qDebug() << "  age_groups → tableGroup";
-//     }
-//     if (m_proxyModels.contains("distances")) {
-//         ui->tableDist->setModel(m_proxyModels["distances"]);
-//         qDebug() << "  distances → tableDist";
-//     }
-//     if (m_proxyModels.contains("delegations")) {
-//         ui->tableOrg->setModel(m_proxyModels["delegations"]);
-//         qDebug() << "  delegations → tableOrg";
-//     }
-// }
+void MainWindow::onConnectClicked() {
+    if (!fl_connectedComport){
+        settingsComport = ui_com_settings->settings();
+        QString port = settingsComport.name;
+        int baudRate = settingsComport.stringBaudRate.toInt();
+
+        if (m_siStation->connectToStation(port, baudRate)) // Connect
+        {
+            fl_connectedComport = true;
+            ui->act_connect_comport->setIcon(QIcon(":/rec/img/connect.png"));
+            ui->act_comport_dialogset->setEnabled(false);
+            showStatusMessage(tr("Connected to %1 : %2, %3")
+                                  .arg(settingsComport.name, settingsComport.stringBaudRate, settingsComport.stringFlowControl));
+        }
+        else fl_connectedComport = false;
+    }
+    else {
+        // Disconnect
+        fl_connectedComport = false;
+        ui->act_connect_comport->setIcon(QIcon(":/rec/img/disconnect.png"));
+        ui->act_comport_dialogset->setEnabled(true);
+        showStatusMessage(tr("Disconnected"));
+        m_siStation->disconnect();
+    }
+}
+
+void MainWindow::onCardDetected(uint32_t cardNumber, SportIdent::CardType type) {
+    QString typeStr;
+    switch (type) {
+    case SportIdent::CardType::SI9:  typeStr = "SI9"; break;
+    case SportIdent::CardType::SI10: typeStr = "SI10"; break;
+    case SportIdent::CardType::SI11: typeStr = "SI11"; break;
+    case SportIdent::CardType::SIAC: typeStr = "SIAC"; break;
+    default: typeStr = "Unknown"; break;
+    }
+
+    // ui->lblCardStatus->setText(
+    //     tr("Карта %1 (тип: %2)").arg(cardNumber).arg(typeStr)
+    //     );
+
+    logMessage(tr("Обнаружена карта %1 типа %2").arg(cardNumber).arg(typeStr));
+}
+
+void MainWindow::onCardRemoved() {
+    // ui->lblCardStatus->setText(tr("Карты нет"));
+    logMessage(tr("Карта извлечена"));
+}
+
+void MainWindow::onCardReadComplete(const SportIdent::CardData& cardData) {
+    displayCardData(cardData);
+    logMessage(tr("Данные карты %1 получены").arg(cardData.cardNumber));
+    logMessage(tr("Старт %1, финиш %2")
+                   .arg(cardData.startTime.time().toString())
+                   .arg(cardData.finishTime.time().toString()));
+}
+
+void MainWindow::onStationConnected(const SportIdent::StationInfo& info) {
+    //ui->lblStationInfo->setText
+        logMessage(
+        tr("Станция %1 (SN: %2, FW: %3)")
+            .arg(info.stationCode)
+            .arg(info.serialNumber)
+            .arg(info.firmwareVersion)
+        );
+
+    logMessage(tr("Станция подключена"));
+}
+
+void MainWindow::onErrorOccurred(const QString& errorMessage) {
+    m_lastError = errorMessage;
+    //ui->lblLastError->setText(errorMessage);
+    logMessage(tr("Ошибка: %1").arg(errorMessage));
+
+    QMessageBox::warning(this, tr("Ошибка"), errorMessage);
+}
+
+void MainWindow::onDebugMessage(const QString& message) {
+    //logMessage(tr("Отладка: %1").arg(message));
+    qDebug() << message;
+}
+
+void MainWindow::logMessage(const QString& message) {
+    QString msg = message;
+    // QString timestamp = QDateTime::currentDateTime().toString("hh:mm:ss");
+    // ui->teLog->append(QString("[%1] %2").arg(timestamp, message));
+    showStatusMessage(msg);
+}
+
+void MainWindow::showStatusMessage(const QString &message)
+{
+    statusbar_msg->setText(message);
+    ui_log_msg(message);
+}
+
+void MainWindow::displayCardData(const SportIdent::CardData& cardData) {
+    // Основная информация
+    // ui->leCardNumber->setText(QString::number(cardData.cardNumber));
+
+    QString typeStr;
+    switch (cardData.cardType) {
+    case SportIdent::CardType::SI9: typeStr = "SI9"; break;
+    case SportIdent::CardType::SI10: typeStr = "SI10"; break;
+    case SportIdent::CardType::SI11: typeStr = "SI11"; break;
+    case SportIdent::CardType::SIAC: typeStr = "SIAC"; break;
+    default: typeStr = "Unknown"; break;
+    }
+    //ui->leCardType->setText(typeStr);
+    ui_log_msg(typeStr);
+
+    // Времена
+    // ui->leStartTime->setText(
+    //     cardData.startTime.isValid() ?
+    //         cardData.startTime.toString("dd.MM.yyyy hh:mm:ss.zzz") :
+    //         tr("Нет данных")
+    //     );
+
+    // ui->leFinishTime->setText(
+    //     cardData.finishTime.isValid() ?
+    //         cardData.finishTime.toString("dd.MM.yyyy hh:mm:ss.zzz") :
+    //         tr("Нет данных")
+    //     );
+
+    // ui->leCheckTime->setText(
+    //     cardData.checkTime.isValid() ?
+    //         cardData.checkTime.toString("dd.MM.yyyy hh:mm:ss.zzz") :
+    //         tr("Нет данных")
+    //     );
+
+    // ui->leClearTime->setText(
+    //     cardData.clearTime.isValid() ?
+    //         cardData.clearTime.toString("dd.MM.yyyy hh:mm:ss.zzz") :
+    //         tr("Нет данных")
+    //     );
+
+    // // Личная информация (для SI10)
+    // ui->leFirstName->setText(cardData.firstName);
+    // ui->leLastName->setText(cardData.lastName);
+    // ui->leOrganization->setText(cardData.organization);
+    // ui->leStartNumber->setText(
+    //     cardData.startNumber > 0 ?
+    //         QString::number(cardData.startNumber) :
+    //         ""
+    //     );
+
+    // // Отметки
+    // ui->tablePunches->setRowCount(cardData.punches.size());
+
+    // for (int i = 0; i < cardData.punches.size(); ++i) {
+    //     const auto& punch = cardData.punches[i];
+
+    //     QTableWidgetItem* controlItem = new QTableWidgetItem(
+    //         QString::number(punch.controlCode)
+    //         );
+    //     QTableWidgetItem* timeItem = new QTableWidgetItem(
+    //         punch.timestamp.toString("hh:mm:ss.zzz")
+    //         );
+    //     QTableWidgetItem* subsecondItem = new QTableWidgetItem(
+    //         QString::number(punch.subsecond)
+    //         );
+
+    //     ui->tablePunches->setItem(i, 0, controlItem);
+    //     ui->tablePunches->setItem(i, 1, timeItem);
+    //     ui->tablePunches->setItem(i, 2, subsecondItem);
+    // }
+
+    // Количество отметок
+    // ui->lePunchCount->setText(
+    //     QString("%1 / %2").arg(cardData.punches.size()).arg(cardData.punchCount)
+    //     );
+}
 
 void MainWindow::connectModelsToWidgets()
 {
@@ -1639,36 +1772,6 @@ void MainWindow::setupMenuBar()
     // Меню уже настроено в createActionsAndConnections()
 }
 
-// void MainWindow::onDocumentOpened()
-// {
-//     qDebug() << "Сигнал: документ открыт, вызываю initializeForDocument()";
-//     initializeForDocument();
-// }
-
-// void MainWindow::onDocumentOpened()
-// {
-//     qDebug() << "Сигнал: документ открыт";
-
-//     // Даем время на завершение открытия БД
-//     QTimer::singleShot(100, this, [this]() {
-//         initializeForDocument();
-
-//         // После инициализации проверяем age_groups
-//         if (m_tableModels.contains("age_groups")) {
-//             SqlTableModel* model = m_tableModels["age_groups"];
-//             qDebug() << "Проверка age_groups после открытия документа:";
-//             qDebug() << "  - Строк в модели:" << model->rowCount();
-//             qDebug() << "  - Текущий фильтр:" << model->filter();
-
-//             // Если данные не загрузились, пробуем снова
-//             if (model->rowCount() == 0) {
-//                 qDebug() << "age_groups пуста, пробую принудительный select...";
-//                 model->select();
-//             }
-//         }
-//     });
-// }
-
 void MainWindow::onDocumentOpened()
 {
     qDebug() << "Сигнал: документ открыт";
@@ -1678,29 +1781,6 @@ void MainWindow::onDocumentOpened()
         initializeForDocument();
     });
 }
-
-// void MainWindow::onDocumentClosed()
-// {
-//     qDebug() << "\n=== ЗАКРЫТИЕ ДОКУМЕНТА ===";
-
-//     // Очищаем модели
-//     clearModels();
-
-//     // Очищаем все таблицы
-//     ui->tablePerson->setModel(nullptr);
-//     ui->tableResult->setModel(nullptr);
-//     ui->tableGroup->setModel(nullptr);
-//     ui->tableDist->setModel(nullptr);
-//     ui->tableOrg->setModel(nullptr);
-
-//     // Очищаем Undo stack
-//     UndoStack::instance().clear();
-
-//     updateWindowTitle();
-//     updateStatusBar();
-
-//     qDebug() << "Документ закрыт\n";
-// }
 
 void MainWindow::onDocumentClosed()
 {
@@ -1756,7 +1836,7 @@ void MainWindow::onDocumentClosed()
 void MainWindow::onDocumentModified(bool modified)
 {
     m_isModified = modified;
-    ui->act_save->setEnabled(modified);
+    //ui->act_save->setEnabled(modified);
     updateWindowTitle();
 }
 
@@ -1894,30 +1974,12 @@ bool MainWindow::confirmUnsavedChanges()
     return true;
 }
 
-// void MainWindow::onCloseDocument()
-// {
-//     if (confirmUnsavedChanges()) {
-//         m_document->close();
-//     }
-// }
-
 void MainWindow::onCloseDocument()
 {
     if (confirmUnsavedChanges()) {
         closeCurrentDocument();
     }
 }
-
-// void MainWindow::onUndo()
-// {
-//     UndoStack::instance().undo();
-// }
-
-// void MainWindow::onRedo()
-// {
-//     UndoStack::instance().redo();
-// }
-
 
 void MainWindow::on_act_undo_triggered()
 {
@@ -1938,15 +2000,6 @@ void MainWindow::on_act_redo_triggered()
     }
 }
 
-
-// void MainWindow::onUndo()
-// {
-// }
-
-// void MainWindow::onRedo()
-// {
-// }
-
 void MainWindow::onAddRecord()
 {
     if (!m_document->isOpen()) {
@@ -1956,15 +2009,6 @@ void MainWindow::onAddRecord()
     // Отображаем диалог для текущей таблицы
     showEditDialog(m_currentTable, -1);
 }
-
-// void MainWindow::showEditDialog(const QString& tableName, qint64 recordId)
-// {
-//     QDialog* dialog = createEditDialog(tableName, recordId);
-//     if (dialog) {
-//         dialog->setAttribute(Qt::WA_DeleteOnClose);
-//         dialog->exec();
-//     }
-// }
 
 void MainWindow::showEditDialog(const QString& tableName, qint64 recordId)
 {

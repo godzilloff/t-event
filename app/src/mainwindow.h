@@ -14,6 +14,8 @@
 #include "settingsdialog.h"
 #include "postrequestsender.h"
 
+#include "serial/isportident_interface.h"
+
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;
@@ -58,15 +60,13 @@ signals:
 
 private slots:
     // COM порт
-    // bool ReinitSerialPort();
-    // void openSerialPort();
-    // void closeSerialPort();
-    // void writeData(const QByteArray &data);
-    // void readData();
-    // void sendDataComport(const QByteArray &data);
-    // void handleError(QSerialPort::SerialPortError error);
-    // void handleBytesWritten(qint64 bytes);
-    // void handleWriteTimeout();
+    void onConnectClicked();
+    void onStationConnected(const SportIdent::StationInfo& info);
+    void onCardDetected(uint32_t cardNumber, SportIdent::CardType type);
+    void onCardReadComplete(const SportIdent::CardData& cardData);
+    void onCardRemoved();
+    void onErrorOccurred(const QString& errorMessage);
+    void onDebugMessage(const QString& message);
 
     // Документ
     void onDocumentOpened();
@@ -81,8 +81,6 @@ private slots:
     void onCloseDocument();
 
     // Undo/Redo
-    // void onUndo();
-    // void onRedo();
     void on_act_undo_triggered();
     void on_act_redo_triggered();
 
@@ -115,7 +113,7 @@ private slots:
     // void on_act_show_groups_triggered();
     // void on_act_show_dists_triggered();
     // void on_act_show_orgs_triggered();
-    // void on_act_comport_dialogset_triggered();
+    void on_act_comport_dialogset_triggered();
     // void on_act_online_triggered();
     // void requestOnline(const QString &number);
     // void on_act_save_as_triggered();
@@ -144,7 +142,7 @@ private:
     void setupUi();
     void setupTimerStatusBar();
     void setupConnections();
-    //void setupConnectionsComport();
+    void setupConnectionsComport();
     void setupMenuBar();
     void initializeForDocument();
     void closeCurrentDocument();
@@ -181,6 +179,7 @@ private:
     void needSave();
     void notNeedSave();
     bool confirmUnsavedChanges();
+    void logMessage(const QString& message);
 
     // Импорт CSV
     void importCsvWithUndo(const QString& filePath);
@@ -212,6 +211,7 @@ private:
     SettingsDialog* ui_com_settings;
 
     // COM порт
+    void displayCardData(const SportIdent::CardData& cardData);
     bool fl_connectedComport;
     SettingsDialog::Settings settingsComport;
     QByteArray dataFromComport;
@@ -220,6 +220,8 @@ private:
     QTimer *clock_timer;
     QSerialPort *comport;
     PostRequestSender *postSender;
+    QScopedPointer<SportIdent::ISportIdentInterface> m_siStation;
+    QString m_lastError;
 
     // Файлы и документы
     const int maxFileNr;

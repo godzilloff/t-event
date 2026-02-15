@@ -56,6 +56,16 @@ set(PROJECT_SOURCES
         src/dialogs/AgeGroupEditDialog.cpp
         src/dialogs/AgeGroupEditDialog.h
 
+        src/serial/isportident_interface.h
+        src/serial/sportident_constants.h
+        src/serial/sportident_cardmanager.h
+        src/serial/sportident_cardmanager.cpp
+        src/serial/sportident_crc.h
+        src/serial/sportident_decoder.h
+        src/serial/sportident_station.h
+        src/serial/sportident_station.cpp
+        src/serial/sportident_types.h
+
         #src/qsportevent.h src/qsportevent.cpp
         #src/race.h src/race.cpp
         #src/course.h src/course.cpp

@@ -23,10 +23,15 @@ file(GLOB_RECURSE APP_SOURCES CONFIGURE_DEPENDS
 )
 list(FILTER APP_SOURCES EXCLUDE REGEX "main\\.cpp$")
 
-add_executable(qtests tst_crc.cpp)
+add_executable(qtest_crc tst_crc.cpp)
 add_test(NAME test COMMAND test)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../app/src)
-target_link_libraries(qtests PRIVATE Qt6::Test Qt6::Core )
+target_link_libraries(qtest_crc PRIVATE Qt6::Test Qt6::Core )
+
+add_executable(qtest_decoder tst_si_decoder.cpp)
+#add_test(NAME test COMMAND test)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../app/src)
+target_link_libraries(qtest_decoder PRIVATE Qt6::Test Qt6::Core )
 
 # foreach(test_src ${TEST_SOURCES})
 #     get_filename_component(test_name ${test_src} NAME_WE)
