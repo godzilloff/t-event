@@ -88,15 +88,15 @@ void SettingsDialog::showPortInfo(int idx)
     if (idx == -1)
         return;
 
-    const QString blankString = tr(::blankString);
+    const QString emptyStr = tr(::blankString);
 
     const QStringList list = m_ui->serialPortInfoListBox->itemData(idx).toStringList();
-    m_ui->descriptionLabel->setText(tr("Описание: %1").arg(list.value(1, blankString)));
-    m_ui->manufacturerLabel->setText(tr("Производитель: %1").arg(list.value(2, blankString)));
-    m_ui->serialNumberLabel->setText(tr("Серийный номер: %1").arg(list.value(3, blankString)));
-    m_ui->locationLabel->setText(tr("Размещение: %1").arg(list.value(4, blankString)));
-    m_ui->vidLabel->setText(tr("ИД производителя: %1").arg(list.value(5, blankString)));
-    m_ui->pidLabel->setText(tr("ИД изделия: %1").arg(list.value(6, blankString)));
+    m_ui->descriptionLabel->setText(tr("Описание: %1").arg(list.value(1, emptyStr)));
+    m_ui->manufacturerLabel->setText(tr("Производитель: %1").arg(list.value(2, emptyStr)));
+    m_ui->serialNumberLabel->setText(tr("Серийный номер: %1").arg(list.value(3, emptyStr)));
+    m_ui->locationLabel->setText(tr("Размещение: %1").arg(list.value(4, emptyStr)));
+    m_ui->vidLabel->setText(tr("ИД производителя: %1").arg(list.value(5, emptyStr)));
+    m_ui->pidLabel->setText(tr("ИД изделия: %1").arg(list.value(6, emptyStr)));
 }
 
 void SettingsDialog::apply()
@@ -166,7 +166,7 @@ void SettingsDialog::fillPortsParameters()
 void SettingsDialog::fillPortsInfo()
 {
     m_ui->serialPortInfoListBox->clear();
-    const QString blankString = tr(::blankString);
+    const QString emptyStr = tr(::blankString);
     const auto infos = QSerialPortInfo::availablePorts();
 
     for (const QSerialPortInfo &info : infos) {
@@ -177,12 +177,12 @@ void SettingsDialog::fillPortsInfo()
         const auto vendorId = info.vendorIdentifier();
         const auto productId = info.productIdentifier();
         list << info.portName()
-             << (!description.isEmpty() ? description : blankString)
-             << (!manufacturer.isEmpty() ? manufacturer : blankString)
-             << (!serialNumber.isEmpty() ? serialNumber : blankString)
+             << (!description.isEmpty() ? description : emptyStr)
+             << (!manufacturer.isEmpty() ? manufacturer : emptyStr)
+             << (!serialNumber.isEmpty() ? serialNumber : emptyStr)
              << info.systemLocation()
-             << (vendorId ? QString::number(vendorId, 16) : blankString)
-             << (productId ? QString::number(productId, 16) : blankString);
+             << (vendorId ? QString::number(vendorId, 16) : emptyStr)
+             << (productId ? QString::number(productId, 16) : emptyStr);
 
         m_ui->serialPortInfoListBox->addItem(list.constFirst(), list);
     }

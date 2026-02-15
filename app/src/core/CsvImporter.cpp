@@ -19,10 +19,7 @@ bool CsvRecord::isValid() const
 QString CsvRecord::toString() const
 {
     return QString("%1 | %2 | %3 | №%4")
-        .arg(fullName)
-        .arg(delegationName)
-        .arg(ageGroup)
-        .arg(bibNumber);
+        .arg(fullName,delegationName,ageGroup,bibNumber);
 }
 
 // Формат csv с сайта orgeo.ru:

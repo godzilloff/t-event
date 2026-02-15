@@ -144,6 +144,28 @@ if(WIN32)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS")
 endif()
 
+# Включаем предупреждения в зависимости от компилятора
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    target_compile_options(T-Event PRIVATE
+        -Wall
+        -Wextra
+        -Wpedantic
+        -Wconversion
+        -Wsign-conversion
+        -Wshadow
+        -Wnon-virtual-dtor
+        -Wold-style-cast
+        -Woverloaded-virtual
+    )
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    message("MSVC - ON")
+    set(CMAKE_MSVC_WARNING_LEVEL 4)
+    target_compile_options(T-Event PRIVATE
+        /permissive- # Более строгий режим (C++17+)
+        /WX        # Предупреждения = ошибки
+    )
+endif()
+
 message(STATUS "Qt6 SQL include dir: ${Qt6Sql_INCLUDE_DIRS}")
 message(STATUS "Qt6 SQL libraries: ${Qt6Sql_LIBRARIES}")
 # Проверка что компоненты найдены

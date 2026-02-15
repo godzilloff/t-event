@@ -361,9 +361,7 @@ bool DatabaseManager::createRecord(const QString& tableName, const QHash<QString
     }
 
     QString sql = QString("INSERT INTO %1 (%2) VALUES (%3)")
-                      .arg(tableName)
-                      .arg(fieldNames.join(", "))
-                      .arg(placeholders.join(", "));
+                      .arg(tableName,fieldNames.join(", "),placeholders.join(", "));
 
     QSqlQuery query(m_db);
     query.prepare(sql);
@@ -399,8 +397,7 @@ bool DatabaseManager::updateRecord(const QString& tableName, qint64 id, const QH
     }
 
     QString sql = QString("UPDATE %1 SET %2, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
-                      .arg(tableName)
-                      .arg(updates.join(", "));
+                      .arg(tableName,updates.join(", "));
 
     QSqlQuery query(m_db);
     query.prepare(sql);
@@ -476,7 +473,7 @@ QList<qint64> DatabaseManager::findRecords(const QString& tableName, const QStri
     if (field.isEmpty()) {
         sql = QString("SELECT id FROM %1").arg(tableName);
     } else {
-        sql = QString("SELECT id FROM %1 WHERE %2 = ?").arg(tableName).arg(field);
+        sql = QString("SELECT id FROM %1 WHERE %2 = ?").arg(tableName, field);
     }
 
     QSqlQuery query(m_db);

@@ -508,60 +508,60 @@ bool PersonEditDialog::validateForm()
 
 QHash<QString, QVariant> PersonEditDialog::collectFormData()
 {
-    QHash<QString, QVariant> data;
+    QHash<QString, QVariant> fdata;
 
-    data["participant_type"] = m_isTeam ? "team" : "individual";
+    fdata["participant_type"] = m_isTeam ? "team" : "individual";
 
     if (m_isTeam) {
-        data["team_name"] = m_editName->text().trimmed();
-        data["team_size"] = m_spinTeamSize->value();
-        data["full_name"] = QVariant();
-        data["birth_date"] = QVariant();
-        data["gender"] = QVariant();
+        fdata["team_name"] = m_editName->text().trimmed();
+        fdata["team_size"] = m_spinTeamSize->value();
+        fdata["full_name"] = QVariant();
+        fdata["birth_date"] = QVariant();
+        fdata["gender"] = QVariant();
     } else {
-        data["full_name"] = m_editName->text().trimmed();
-        data["birth_date"] = m_editBirthDate->date().toString(Qt::ISODate);
-        data["gender"] = m_comboGender->currentText();
-        data["team_name"] = QVariant();
-        data["team_size"] = QVariant();
+        fdata["full_name"] = m_editName->text().trimmed();
+        fdata["birth_date"] = m_editBirthDate->date().toString(Qt::ISODate);
+        fdata["gender"] = m_comboGender->currentText();
+        fdata["team_name"] = QVariant();
+        fdata["team_size"] = QVariant();
     }
 
-    data["bib_number"] = m_editBib->text().trimmed();
+    fdata["bib_number"] = m_editBib->text().trimmed();
 
     if (m_editChip->text().length() > 0)
-        data["chip_number"] = m_editChip->text().trimmed();
+        fdata["chip_number"] = m_editChip->text().trimmed();
 
     if (m_comboDelegation->currentIndex() >= 0) {
         qint64 delegationId = m_delegationsModel->data(
                                                     m_delegationsModel->index(m_comboDelegation->currentIndex(), 0)).toLongLong();
-        data["delegation_id"] = delegationId;
+        fdata["delegation_id"] = delegationId;
     } else {
-        data["delegation_id"] = QVariant(); // NULL
+        fdata["delegation_id"] = QVariant(); // NULL
     }
 
     if (m_comboDistance->currentIndex() >= 0) {
         qint64 distanceId = m_distancesModel->data(
                                                 m_distancesModel->index(m_comboDistance->currentIndex(), 0)).toLongLong();
-        data["distance_id"] = distanceId;
+        fdata["distance_id"] = distanceId;
     } else {
-        data["distance_id"] = QVariant(); // NULL
+        fdata["distance_id"] = QVariant(); // NULL
     }
 
     if (m_comboAgeGroup->currentIndex() >= 0) {
         qint64 ageGroupId = m_ageGroupsModel->data(
                                                 m_ageGroupsModel->index(m_comboAgeGroup->currentIndex(), 0)).toLongLong();
-        data["age_group_id"] = ageGroupId;
+        fdata["age_group_id"] = ageGroupId;
     } else {
-        data["age_group_id"] = QVariant(); // NULL
+        fdata["age_group_id"] = QVariant(); // NULL
     }
 
     if (!m_editStartTime->time().isNull() && m_editStartTime->time().isValid() && (m_editStartTime->time().msecsSinceStartOfDay() > 0 ) ) {
-        data["start_time"] = m_editStartTime->time().toString("HH:mm:ss");
+        fdata["start_time"] = m_editStartTime->time().toString("HH:mm:ss");
     } else {
-        data["start_time"] = QVariant(); // NULL
+        fdata["start_time"] = QVariant(); // NULL
     }
 
-    return data;
+    return fdata;
 }
 
 void PersonEditDialog::onParticipantTypeChanged(int index)

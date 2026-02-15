@@ -230,9 +230,9 @@ void MainWindow::keyPressEvent(QKeyEvent *e)
                     int row = index.row();
                     QVariant value = index.model()->data(index.model()->index(row,4), Qt::DisplayRole);
                     if (value.canConvert<QString>()) {
-                        QString data = value.value<QString>();
-                        qDebug() << data;
-                        //requestOnline(data);
+                        QString str = value.value<QString>();
+                        qDebug() << str;
+                        //requestOnline(str);
                     }
                 }
             }
@@ -585,7 +585,7 @@ void MainWindow::updateCompetitionFilters()
     }
 
     // Обновляем прокси-модели
-    for (auto proxy : m_proxyModels) {
+    for (const auto& proxy : std::as_const(m_proxyModels)) {
         if (proxy) {
             proxy->invalidate();
         }
@@ -1216,8 +1216,8 @@ void MainWindow::onCardReadComplete(const SportIdent::CardData& cardData) {
     displayCardData(cardData);
     logMessage(tr("Данные карты %1 получены").arg(cardData.cardNumber));
     logMessage(tr("Старт %1, финиш %2")
-                   .arg(cardData.startTime.time().toString())
-                   .arg(cardData.finishTime.time().toString()));
+                   .arg(cardData.startTime.time().toString(),
+                        cardData.finishTime.time().toString()));
 }
 
 void MainWindow::onStationConnected(const SportIdent::StationInfo& info) {
@@ -1484,14 +1484,14 @@ void MainWindow::importCsvWithUndo(const QString& filePath)
                 delegationMap[record.delegationName] = existing.first()["id"].toLongLong();
             } else {
                 // Создаем новую делегацию
-                QHash<QString, QVariant> data;
-                data["competition_id"] = competitionId;
-                data["name"] = record.delegationName;
-                data["representative"] = "";
-                data["contact"] = record.comment; // Используем комментарий как контакт
+                QHash<QString, QVariant> fdata;
+                fdata["competition_id"] = competitionId;
+                fdata["name"] = record.delegationName;
+                fdata["representative"] = "";
+                fdata["contact"] = record.comment; // Используем комментарий как контакт
 
                 qint64 delegationId = -1;
-                if (db.createRecord("delegations", data, &delegationId)) {
+                if (db.createRecord("delegations", fdata, &delegationId)) {
                     delegationMap[record.delegationName] = delegationId;
                 }
             }
@@ -1514,15 +1514,15 @@ void MainWindow::importCsvWithUndo(const QString& filePath)
                 ageGroupMap[record.ageGroup] = existing.first()["id"].toLongLong();
             } else {
                 // Создаем новую возрастную группу
-                QHash<QString, QVariant> data;
-                data["competition_id"] = competitionId;
-                data["name"] = record.ageGroup;
-                data["min_age"] = 0;
-                data["max_age"] = 99;
-                data["price"] = 1;
+                QHash<QString, QVariant> fdata;
+                fdata["competition_id"] = competitionId;
+                fdata["name"] = record.ageGroup;
+                fdata["min_age"] = 0;
+                fdata["max_age"] = 99;
+                fdata["price"] = 1;
 
                 qint64 ageGroupId = -1;
-                if (db.createRecord("age_groups", data, &ageGroupId)) {
+                if (db.createRecord("age_groups", fdata, &ageGroupId)) {
                     ageGroupMap[record.ageGroup] = ageGroupId;
                 }
             }
@@ -1579,14 +1579,14 @@ void MainWindow::importCsvWithUndo(const QString& filePath)
         }
 
         // Подготавливаем данные участника
-        QHash<QString, QVariant> data;
-        data["competition_id"] = competitionId;
-        data["delegation_id"] = delegationId;
-        data["distance_id"] = distanceId;
-        data["age_group_id"] = ageGroupId;
-        data["participant_type"] = "individual";
-        data["full_name"] = record.fullName;
-        data["bib_number"] = record.bibNumber;
+        QHash<QString, QVariant> fdata;
+        fdata["competition_id"] = competitionId;
+        fdata["delegation_id"] = delegationId;
+        fdata["distance_id"] = distanceId;
+        fdata["age_group_id"] = ageGroupId;
+        fdata["participant_type"] = "individual";
+        fdata["full_name"] = record.fullName;
+        fdata["bib_number"] = record.bibNumber;
 
         // Год рождения
         if (!record.birthYear.isEmpty()) {
@@ -1594,13 +1594,13 @@ void MainWindow::importCsvWithUndo(const QString& filePath)
             int year = record.birthYear.toInt(&ok);
             if (ok && year >= 1900 && year <= QDate::currentDate().year()) {
                 QDate birthDate(year, 1, 1);
-                data["birth_date"] = birthDate.toString(Qt::ISODate);
+                fdata["birth_date"] = birthDate.toString(Qt::ISODate);
             }
         }
 
         // Номер чипа
         if (!record.chipNumber.isEmpty() && record.chipNumber != "0") {
-            data["chip_number"] = record.chipNumber;
+            fdata["chip_number"] = record.chipNumber;
         }
 
         // Определяем пол
@@ -1611,7 +1611,7 @@ void MainWindow::importCsvWithUndo(const QString& filePath)
             ageGroupLower.contains("дев")) {
             gender = "Женский";
         }
-        data["gender"] = gender;
+        fdata["gender"] = gender;
 
         // // Спортивный разряд (в комментарий)
         // if (!record.sportRank.isEmpty() && record.sportRank != "0") {
@@ -1620,9 +1620,9 @@ void MainWindow::importCsvWithUndo(const QString& filePath)
 
         // Создаем участника
         qint64 participantId = -1;
-        if (db.createRecord("participants", data, &participantId)) {
+        if (db.createRecord("participants", fdata, &participantId)) {
             importedIds.append(participantId);
-            importedData.append(data);
+            importedData.append(fdata);
         }
     }
 
@@ -1746,7 +1746,7 @@ void MainWindow::clearModels()
     ui->tableOrg->setModel(nullptr);
 
     // Удаляем прокси-модели
-    for (FilterProxyModel* proxy : m_proxyModels) {
+    for (FilterProxyModel* proxy : qAsConst(m_proxyModels)) {
         if (proxy) {
             proxy->setSourceModel(nullptr); // Важно: отключаем от исходной модели
             proxy->deleteLater();
@@ -1755,7 +1755,7 @@ void MainWindow::clearModels()
     m_proxyModels.clear();
 
     // Удаляем модели
-    for (SqlTableModel* model : m_tableModels) {
+    for (SqlTableModel* model : qAsConst(m_tableModels)) {
         if (model) {
             model->clear(); // Очищаем данные
             model->deleteLater();
@@ -1787,14 +1787,14 @@ void MainWindow::onDocumentClosed()
     qDebug() << "\n=== ЗАКРЫТИЕ ДОКУМЕНТА ===";
 
     // Отключаем все сигналы от моделей перед очисткой
-    for (auto model : m_tableModels) {
+    for (auto model : qAsConst(m_tableModels)) {
         if (model) {
             model->disconnect();
         }
     }
 
     // Сбрасываем фильтры в моделях
-    for (auto model : m_tableModels) {
+    for (auto model : qAsConst(m_tableModels)) {
         if (model) {
             model->setFilter(QString()); // Сбрасываем фильтр
             model->clear(); // Очищаем данные
@@ -2244,10 +2244,10 @@ void MainWindow::updateWindowTitle()
     QString title = tr("Спортивное соревнование");
 
     if (m_document->isOpen()) {
-        title = QString("%1 - %2").arg(m_document->competitionName()).arg(title);
+        title = QString("%1 - %2").arg(m_document->competitionName(),title);
 
         if (!m_document->filePath().isEmpty()) {
-            title = QString("%1 - %2").arg(QFileInfo(m_document->filePath()).fileName()).arg(title);
+            title = QString("%1 - %2").arg(QFileInfo(m_document->filePath()).fileName(),title);
         }
 
         if (m_isModified) {

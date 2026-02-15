@@ -48,12 +48,14 @@ void FormFilter::recieveDataFromMain()
 
 void FormFilter::updateStrOrg(int index)
 {
+    Q_UNUSED(index);
     // MainWindow *mainWindow = static_cast<MainWindow*>(parent());
     // mainWindow->proxyModelPerson->setOrganization(ui->cb_org->currentText());
 }
 
 void FormFilter::updateStrGroup(int index)
 {
+    Q_UNUSED(index);
     // MainWindow *mainWindow = static_cast<MainWindow*>(parent());
     // mainWindow->proxyModelPerson->setGroup(ui->cb_group->currentText());
 }

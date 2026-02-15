@@ -129,11 +129,11 @@ bool DelegationEditDialog::validateForm()
 
 QHash<QString, QVariant> DelegationEditDialog::collectFormData()
 {
-    QHash<QString, QVariant> data;
+    QHash<QString, QVariant> fdata;
     
-    data["name"] = m_editName->text().trimmed();
-    data["representative"] = m_editRepresentative->text().trimmed();
-    data["contact"] = m_editContact->toPlainText().trimmed();
+    fdata["name"] = m_editName->text().trimmed();
+    fdata["representative"] = m_editRepresentative->text().trimmed();
+    fdata["contact"] = m_editContact->toPlainText().trimmed();
     
-    return data;
+    return fdata;
 }

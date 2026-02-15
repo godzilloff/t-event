@@ -139,12 +139,12 @@ bool AgeGroupEditDialog::validateForm()
 
 QHash<QString, QVariant> AgeGroupEditDialog::collectFormData()
 {
-    QHash<QString, QVariant> data;
+    QHash<QString, QVariant> formdata;
     
-    data["name"] = m_editName->text().trimmed();
-    data["min_age"] = (m_spinMinAge->value() > 0) ? m_spinMinAge->value() : QVariant();
-    data["max_age"] = (m_spinMaxAge->value() > 0) ? m_spinMaxAge->value() : QVariant();
-    data["price"] = m_spinPrice->value();
+    formdata["name"] = m_editName->text().trimmed();
+    formdata["min_age"] = (m_spinMinAge->value() > 0) ? m_spinMinAge->value() : QVariant();
+    formdata["max_age"] = (m_spinMaxAge->value() > 0) ? m_spinMaxAge->value() : QVariant();
+    formdata["price"] = m_spinPrice->value();
     
-    return data;
+    return formdata;
 }

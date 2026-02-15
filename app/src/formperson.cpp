@@ -51,6 +51,7 @@ FormPerson::~FormPerson()
 
 void FormPerson::onCheck_numCard(const QString &text)
 {
+    Q_UNUSED(text);
     //qDebug() << "on_check_numCard_textChanged ok";
     // int card = text.toInt();
     // if ( (card==0)||(ptrSEvent->isCardNumFree(card)) )

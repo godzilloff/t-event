@@ -153,12 +153,12 @@ bool DistanceEditDialog::validateForm()
 
 QHash<QString, QVariant> DistanceEditDialog::collectFormData()
 {
-    QHash<QString, QVariant> data;
+    QHash<QString, QVariant> fdata;
     
-    data["name"] = m_editName->text().trimmed();
-    data["length"] = m_spinLength->value();
-    data["control_time"] = m_spinControlTime->value();
-    data["control_points"] = m_editControlPoints->toPlainText().trimmed();
+    fdata["name"] = m_editName->text().trimmed();
+    fdata["length"] = m_spinLength->value();
+    fdata["control_time"] = m_spinControlTime->value();
+    fdata["control_points"] = m_editControlPoints->toPlainText().trimmed();
     
-    return data;
+    return fdata;
 }
