@@ -265,7 +265,7 @@ qint64 Document::insertRecord(const QString& tableName, const QHash<QString, QVa
 
     // Добавляем competition_id если его нет
     QHash<QString, QVariant> recordData = data;
-    if (!recordData.contains("competition_id") && tableName != "competitions") {
+    if (!recordData.contains("competition_id") && tableName != "competitions" && tableName != "results" ) {
         recordData["competition_id"] = m_competitionId;
     }
 
@@ -360,6 +360,97 @@ bool Document::deleteRecord(const QString& tableName, qint64 id)
     }
 
     return false;
+}
+
+bool Document::addResult(const SportIdent::CardData& cardData, qint64 participantId)
+{
+    if (!isOpen() || !cardData.isValid()) {
+        return false;
+    }
+
+    // Если participantId не указан, пытаемся найти по номеру карты
+    if (participantId <= 0) {
+        participantId = findParticipantByChipNumber(cardData.cardNumber);
+        if (participantId <= 0) {
+            qWarning() << "Participant not found for chip number:" << cardData.cardNumber;
+            return false;
+        }
+    }
+
+    // Проверяем, нет ли уже результата
+    if (hasResultForParticipant(participantId)) {
+        qWarning() << "Result already exists for participant:" << participantId;
+        return false;
+    }
+
+    // Начинаем транзакцию для атомарности
+    auto& db = DatabaseManager::instance();
+    db.beginTransaction();
+
+    // Создаем результат
+    QHash<QString, QVariant> resultData;
+    resultData["participant_id"] = participantId;
+    resultData["chip_number"] = QString::number(cardData.cardNumber);
+
+    if (cardData.startTime.isValid()) {
+        resultData["start_time"] = cardData.startTime.toString(Qt::ISODate);
+    }
+
+    if (cardData.finishTime.isValid()) {
+        resultData["finish_time"] = cardData.finishTime.toString(Qt::ISODate);
+    }
+
+    if (cardData.startTime.isValid() && cardData.finishTime.isValid()) {
+        resultData["result_time"] = cardData.startTime.secsTo(cardData.finishTime);
+    }
+
+    resultData["status"] = "finished";
+
+    qint64 resultId = insertRecord("results", resultData);
+    if (resultId == -1) {
+        db.rollbackTransaction();
+        return false;
+    }
+
+    // Сохраняем отметки КП
+    for (int i = 0; i < cardData.punches.size(); ++i) {
+        const auto& punch = cardData.punches[i];
+
+        QHash<QString, QVariant> cpData;
+        cpData["result_id"] = resultId;
+        cpData["control_point_id"] = punch.controlCode;
+        cpData["visit_time"] = punch.timestamp.toString(Qt::ISODate);
+        cpData["order_number"] = i + 1;
+
+        // Используем прямой метод DatabaseManager, чтобы не создавать отдельные команды undo
+        db.createRecord("control_point_times", cpData);
+    }
+
+    db.commitTransaction();
+
+    emit resultAdded(resultId, participantId);
+    return true;
+}
+
+qint64 Document::findParticipantByChipNumber(uint32_t chipNumber) const
+{
+    auto& db = DatabaseManager::instance();
+    QString chipStr = QString::number(chipNumber);
+
+    auto participants = db.findRecords("participants", "chip_number", chipStr);
+    return participants.isEmpty() ? -1 : participants.first();
+}
+
+bool Document::hasResultForParticipant(qint64 participantId) const
+{
+    return findResultIdForParticipant(participantId) != -1;
+}
+
+qint64 Document::findResultIdForParticipant(qint64 participantId) const
+{
+    auto& db = DatabaseManager::instance();
+    auto results = db.findRecords("results", "participant_id", participantId);
+    return results.isEmpty() ? -1 : results.first();
 }
 
 QHash<QString, QVariant> Document::getRecord(const QString& tableName, qint64 id) const

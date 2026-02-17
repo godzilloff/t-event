@@ -7,6 +7,8 @@
 #include <QHash>
 #include <QVariant>
 
+#include "serial/sportident_types.h"
+
 class Document : public QObject
 {
     Q_OBJECT
@@ -43,6 +45,14 @@ public:
     bool updateRecord(const QString& tableName, qint64 id, const QHash<QString, QVariant>& data);
     bool deleteRecord(const QString& tableName, qint64 id);
 
+    // Обработка результатов
+    bool addResult(const SportIdent::CardData& cardData, qint64 participantId = -1);
+    // Поиск участника по номеру карты
+    qint64 findParticipantByChipNumber(uint32_t chipNumber) const;
+    // Проверка существования результата
+    bool hasResultForParticipant(qint64 participantId) const;
+    qint64 findResultIdForParticipant(qint64 participantId) const;
+
     QHash<QString, QVariant> getRecord(const QString& tableName, qint64 id) const;
 
     // Статистика
@@ -63,6 +73,7 @@ signals:
     void recordUpdated(const QString& tableName, qint64 id);
     void recordDeleted(const QString& tableName, qint64 id);
     void competitionChanged(qint64 competitionId);
+    void resultAdded(qint64 resultId, qint64 participantId);
 
 private:
     bool setupNewDatabase(const QString& filePath);

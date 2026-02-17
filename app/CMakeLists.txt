@@ -36,6 +36,8 @@ set(PROJECT_SOURCES
         src/core/CsvImporter.h
         src/core/UndoStack.cpp
         src/core/UndoStack.h
+        src/core/ResultProcessor.cpp
+        src/core/ResultProcessor.h
 
         src/models/SqlTableModel.h
         src/models/SqlTableModel.cpp

@@ -322,6 +322,64 @@ void MainWindow::initializeForDocument()
     });
 
     qDebug() << "=== ИНИЦИАЛИЗАЦИЯ ЗАВЕРШЕНА ===";
+
+    m_resultProcessor.reset(new ResultProcessor(m_document, this));
+    connect(m_resultProcessor.data(), &ResultProcessor::resultProcessed,
+            this, &MainWindow::onResultProcessed);
+    // connect(m_resultProcessor.data(), &ResultProcessor::participantNotFound,
+    //         this, &MainWindow::onParticipantNotFound);
+    qDebug() << "=== ResultProcessor подключен ===";
+}
+
+void MainWindow::onResultProcessed(qint64 resultId, const SportIdent::CardData& cardData)
+{
+    qDebug() << "Результат обработан, ID:" << resultId << "Номер карты:" << cardData.cardNumber;
+
+    // 1. Обновляем модель результатов
+    if (m_tableModels.contains("results")) {
+        // Простой способ - перезагрузить всю таблицу
+        m_tableModels["results"]->select();
+
+        // 2. Находим строку с новым результатом и выделяем её
+        FilterProxyModel* proxyModel = m_proxyModels.value("results");
+        if (proxyModel) {
+            // Ищем запись в исходной модели
+            SqlTableModel* sourceModel = m_tableModels["results"];
+            for (int row = 0; row < sourceModel->rowCount(); ++row) {
+                QModelIndex index = sourceModel->index(row, 0); // ID в первой колонке
+                if (sourceModel->data(index).toLongLong() == resultId) {
+                    // Нашли, преобразуем в индекс прокси
+                    QModelIndex sourceIdx = sourceModel->index(row, 0);
+                    QModelIndex proxyIdx = proxyModel->mapFromSource(sourceIdx);
+
+                    // Выделяем строку в таблице
+                    ui->tableResult->selectionModel()->select(
+                        proxyIdx,
+                        QItemSelectionModel::Select | QItemSelectionModel::Rows
+                        );
+
+                    // Прокручиваем к выделенной строке
+                    ui->tableResult->scrollTo(proxyIdx);
+
+                    // Делаем таблицу результатов текущей вкладкой
+                    ui->tabWidget->setCurrentIndex(1); // 1 - вкладка с результатами
+
+                    qDebug() << "Результат выделен в таблице, строка:" << row;
+                    break;
+                }
+            }
+        }
+
+        // 3. Подгоняем столбцы
+        ui->tableResult->resizeColumnsToContents();
+    }
+
+    // 4. Обновляем информацию о количестве результатов в статусной строке
+    updateStatusBar();
+
+    // 5. Показываем сообщение в логе
+    logMessage(tr("Результат для карты %1 успешно добавлен (ID: %2)")
+                   .arg(QString::number(cardData.cardNumber), QString::number(resultId)));
 }
 
 void MainWindow::setupDelegates()
@@ -1200,24 +1258,21 @@ void MainWindow::onCardDetected(uint32_t cardNumber, SportIdent::CardType type) 
     default: typeStr = "Unknown"; break;
     }
 
-    // ui->lblCardStatus->setText(
-    //     tr("Карта %1 (тип: %2)").arg(cardNumber).arg(typeStr)
-    //     );
-
     logMessage(tr("Обнаружена карта %1 типа %2").arg(cardNumber).arg(typeStr));
 }
 
 void MainWindow::onCardRemoved() {
-    // ui->lblCardStatus->setText(tr("Карты нет"));
     logMessage(tr("Карта извлечена"));
 }
 
 void MainWindow::onCardReadComplete(const SportIdent::CardData& cardData) {
-    displayCardData(cardData);
-    logMessage(tr("Данные карты %1 получены").arg(cardData.cardNumber));
-    logMessage(tr("Старт %1, финиш %2")
-                   .arg(cardData.startTime.time().toString(),
-                        cardData.finishTime.time().toString()));
+    // displayCardData(cardData);
+    // logMessage(tr("Данные карты %1 получены").arg(cardData.cardNumber));
+    // logMessage(tr("Старт %1, финиш %2")
+    //                .arg(cardData.startTime.time().toString(),
+    //                     cardData.finishTime.time().toString()));
+
+    m_resultProcessor->processCardData(cardData, this);
 }
 
 void MainWindow::onStationConnected(const SportIdent::StationInfo& info) {

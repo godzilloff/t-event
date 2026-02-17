@@ -14,6 +14,8 @@
 #include "settingsdialog.h"
 #include "postrequestsender.h"
 
+#include "core/ResultProcessor.h"
+
 #include "serial/isportident_interface.h"
 
 QT_BEGIN_NAMESPACE
@@ -67,6 +69,7 @@ private slots:
     void onCardRemoved();
     void onErrorOccurred(const QString& errorMessage);
     void onDebugMessage(const QString& message);
+    void onResultProcessed(qint64 resultId, const SportIdent::CardData& cardData);
 
     // Документ
     void onDocumentOpened();
@@ -221,6 +224,7 @@ private:
     QSerialPort *comport;
     PostRequestSender *postSender;
     QScopedPointer<SportIdent::ISportIdentInterface> m_siStation;
+    QScopedPointer<ResultProcessor> m_resultProcessor;
     QString m_lastError;
 
     // Файлы и документы
