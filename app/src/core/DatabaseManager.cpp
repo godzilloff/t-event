@@ -330,6 +330,38 @@ void DatabaseManager::createViews()
         LEFT JOIN distances dist ON p.distance_id = dist.id
         LEFT JOIN age_groups ag ON p.age_group_id = ag.id
     )");
+
+    // Добавляем VIEW для результатов с информацией об участниках
+    query.exec(R"(
+        CREATE VIEW IF NOT EXISTS v_results_details AS
+        SELECT
+            r.id,
+            p.full_name,
+            ag.name as age_group_name,
+            d.name as delegation_name,
+            r.result_time,
+            r.status,
+            p.bib_number,
+            r.chip_number,
+            r.start_time,
+            r.finish_time,
+            p.gender,
+            r.participant_id,
+            dist.name as distance_name
+        FROM results r
+        LEFT JOIN participants p ON r.participant_id = p.id
+        LEFT JOIN delegations d ON p.delegation_id = d.id
+        LEFT JOIN distances dist ON p.distance_id = dist.id
+        LEFT JOIN age_groups ag ON p.age_group_id = ag.id
+    )");
+
+    // qDebug() << "=== СТРУКТУРА v_results_details ===";
+    // QSqlQuery testQuery("PRAGMA table_info(v_results_details)", m_db);
+    // while (testQuery.next()) {
+    //     qDebug() << "Колонка" << testQuery.value(0).toInt() << ":"
+    //              << testQuery.value(1).toString() << "тип:"
+    //              << testQuery.value(2).toString();
+    // }
 }
 
 void DatabaseManager::createIndexes()

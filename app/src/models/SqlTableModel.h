@@ -4,6 +4,8 @@
 #include <QSqlRelationalTableModel>
 #include <QSortFilterProxyModel>
 
+#include "AbstractProxyModel.h"
+
 class SqlTableModel : public QSqlRelationalTableModel
 {
     Q_OBJECT
@@ -54,7 +56,9 @@ public:
     QSet<int> m_hiddenColumns;
 };
 
-class FilterProxyModel : public QSortFilterProxyModel
+// ===============================
+
+class FilterProxyModel : public AbstractProxyModel
 {
     Q_OBJECT
 
@@ -62,18 +66,18 @@ public:
     explicit FilterProxyModel(QObject* parent = nullptr);
 
     void setCompetitionFilter(qint64 competitionId);
-    void setTextFilter(const QString& text);
+    void setTextFilter(const QString& text) override;
     void setFilterColumns(const QList<int>& columns);
 
     // Публичные методы для доступа
     QModelIndex mapToSourcePublic(const QModelIndex& proxyIndex) const;
     QModelIndex mapFromSourcePublic(const QModelIndex& sourceIndex) const;
-    qint64 recordId(const QModelIndex& proxyIndex) const;
+    qint64 recordId(const QModelIndex& proxyIndex) const override;
 
-    // Управление видимостью столбцов (вместо порядка)
-    void setColumnVisible(int column, bool visible);
-    bool isColumnVisible(int column) const;
-    void setVisibleColumns(const QList<int>& columns);
+    // Управление видимостью столбцов
+    void setColumnVisible(int column, bool visible) override;
+    bool isColumnVisible(int column) const override;
+    void setVisibleColumns(const QList<int>& columns) override;
 
 private slots:
     void onSourceModelChanged();
@@ -86,7 +90,7 @@ private:
     qint64 m_competitionId_prx = -1;
     QString m_filterText;
     QList<int> m_filterColumns;
-    QSet<int> m_visibleColumns; // Новое поле для видимых столбцов
+    QSet<int> m_visibleColumns;
 };
 
 #endif // SQLTABLEMODEL_H

@@ -4,6 +4,9 @@
 #include <QSqlError>
 #include <QDebug>
 
+#include <QSqlRelationalTableModel>
+#include <QSortFilterProxyModel>
+
 // =============== SqlTableModel ===============
 
 SqlTableModel::SqlTableModel(QObject* parent, QSqlDatabase db)
@@ -268,13 +271,17 @@ void SqlTableModel::hideColumns(const QList<int>& columns)
 
 bool SqlTableModel::select()
 {
-    qDebug() << "SqlTableModel::select() для таблицы:" << tableName();
-    //bool result = QSqlTableModel::select();
-    bool result = QSqlRelationalTableModel::select();
+    int oldRowCount = rowCount(); // Проверяем, действительно ли изменились данные
+
+    bool result = QSqlTableModel::select();
 
     if (result) {
-        qDebug() << "  Успех! Строк:" << rowCount();
-        emit dataLoaded(); // Сигнализируем о загрузке данных
+        int newRowCount = rowCount();
+        if (oldRowCount != newRowCount) {
+            emit dataLoaded();
+        } else {
+            emit dataLoaded(); // или не испускать, если ничего не изменилось
+        }
     }
 
     return result;
@@ -283,23 +290,14 @@ bool SqlTableModel::select()
 // =============== FilterProxyModel ===============
 
 FilterProxyModel::FilterProxyModel(QObject* parent)
-    : QSortFilterProxyModel(parent)
+    : AbstractProxyModel(parent) // Изменено с QSortFilterProxyModel на AbstractProxyModel
 {
-    // Обновляемся при изменении исходной модели
-    connect(this, &QSortFilterProxyModel::sourceModelChanged,
+    connect(this, &QAbstractItemModel::modelReset,
+            this, &FilterProxyModel::onSourceModelChanged);
+    connect(this, &QAbstractItemModel::rowsInserted,
             this, &FilterProxyModel::onSourceModelChanged);
 }
 
-void FilterProxyModel::onSourceModelChanged()
-{
-    if (sourceModel()) {
-        // Принудительное обновление при смене модели
-        invalidate();
-        sort(0); // Сортировка по первому столбцу
-    }
-}
-
-// Фильтрация
 void FilterProxyModel::setCompetitionFilter(qint64 competitionId)
 {
     m_competitionId_prx = competitionId;
@@ -308,10 +306,8 @@ void FilterProxyModel::setCompetitionFilter(qint64 competitionId)
 
 void FilterProxyModel::setTextFilter(const QString& text)
 {
-    if (m_filterText != text) {
-        m_filterText = text;
-        invalidateFilter();
-    }
+    m_filterText = text;
+    invalidateFilter();
 }
 
 void FilterProxyModel::setFilterColumns(const QList<int>& columns)
@@ -320,7 +316,6 @@ void FilterProxyModel::setFilterColumns(const QList<int>& columns)
     invalidateFilter();
 }
 
-// Управление видимостью столбцов
 void FilterProxyModel::setColumnVisible(int column, bool visible)
 {
     if (visible) {
@@ -334,18 +329,27 @@ void FilterProxyModel::setColumnVisible(int column, bool visible)
 bool FilterProxyModel::isColumnVisible(int column) const
 {
     if (m_visibleColumns.isEmpty()) {
-        return true; // Если не задано, показываем все
+        return true;
     }
     return m_visibleColumns.contains(column);
 }
 
 void FilterProxyModel::setVisibleColumns(const QList<int>& columns)
 {
-    m_visibleColumns = QSet<int>(columns.begin(), columns.end());
-    invalidateFilter();
+    // qDebug() << "FilterProxyModel::setVisibleColumns для" << objectName()
+    //          << "устанавливаю:" << columns;
+
+    m_visibleColumns.clear();
+    for (int col : columns) {
+        m_visibleColumns.insert(col);
+    }
+
+    // qDebug() << "  m_visibleColumns теперь:" << m_visibleColumns;
+
+    invalidateFilter();           // Инвалидируем фильтр
+    invalidateColumnsFilter();    // Также инвалидируем фильтр колонок
 }
 
-// Доступ к данным
 QModelIndex FilterProxyModel::mapToSourcePublic(const QModelIndex& proxyIndex) const
 {
     return mapToSource(proxyIndex);
@@ -358,86 +362,58 @@ QModelIndex FilterProxyModel::mapFromSourcePublic(const QModelIndex& sourceIndex
 
 qint64 FilterProxyModel::recordId(const QModelIndex& proxyIndex) const
 {
+    if (!proxyIndex.isValid()) {
+        return -1;
+    }
+
     QModelIndex sourceIndex = mapToSource(proxyIndex);
     if (!sourceIndex.isValid()) {
         return -1;
     }
 
-    SqlTableModel* sourceModel = qobject_cast<SqlTableModel*>(this->sourceModel());
-    if (!sourceModel) {
-        return -1;
-    }
-
-    return sourceModel->recordId(sourceIndex);
+    // Предполагаем, что ID находится в первой колонке (0)
+    QModelIndex idIndex = sourceModel()->index(sourceIndex.row(), 0);
+    return sourceModel()->data(idIndex).toLongLong();
 }
 
-// Фильтрация строк
+
 bool FilterProxyModel::filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const
 {
-    if (!sourceModel()) {
-        return false;
+    // Если нет фильтра, принимаем строку
+    if (m_filterText.isEmpty() && m_competitionId_prx == -1) {
+        return true;
     }
 
-    // 1. Фильтр по competition_id (если установлен)
-    if (m_competitionId_prx > 0) {
-        // Ищем столбец с competition_id в исходной модели
-        int competitionColumn = -1;
-        for (int col = 0; col < sourceModel()->columnCount(); ++col) {
-            QString fieldName = sourceModel()->headerData(col, Qt::Horizontal).toString();
-            if (fieldName.compare("competition_id", Qt::CaseInsensitive) == 0) {
-                competitionColumn = col;
-                break;
-            }
-        }
+    QModelIndex index;
 
-        // Если нашли столбец competition_id, проверяем значение
-        if (competitionColumn >= 0) {
-            QModelIndex competitionIndex = sourceModel()->index(sourceRow, competitionColumn, sourceParent);
-            QVariant competitionValue = sourceModel()->data(competitionIndex, Qt::DisplayRole);
-            bool ok = false;
-            qint64 rowCompetitionId = competitionValue.toLongLong(&ok);
-
-            if (!ok || rowCompetitionId != m_competitionId_prx) {
-                return false; // Пропускаем строку, если competition_id не совпадает
-            }
+    // Проверяем по competition_id если нужно
+    if (m_competitionId_prx != -1) {
+        // Предполагаем, что competition_id находится в колонке 1
+        index = sourceModel()->index(sourceRow, 1, sourceParent);
+        if (index.data().toLongLong() != m_competitionId_prx) {
+            return false;
         }
-        // Если столбца competition_id нет, пропускаем фильтрацию
     }
 
-    // 2. Текстовый фильтр (если установлен)
+    // Проверяем по текстовому фильтру
     if (!m_filterText.isEmpty()) {
-        bool textFound = false;
-
-        // Если указаны конкретные столбцы для фильтрации
+        // Если указаны конкретные колонки для поиска
         if (!m_filterColumns.isEmpty()) {
-            for (int col : m_filterColumns) {
-                if (col >= 0 && col < sourceModel()->columnCount()) {
-                    QModelIndex index = sourceModel()->index(sourceRow, col, sourceParent);
-                    QString data = sourceModel()->data(index, Qt::DisplayRole).toString();
-                    if (data.contains(m_filterText, Qt::CaseInsensitive)) {
-                        textFound = true;
-                        break;
-                    }
+            for (int column : m_filterColumns) {
+                index = sourceModel()->index(sourceRow, column, sourceParent);
+                if (index.data().toString().contains(m_filterText, Qt::CaseInsensitive)) {
+                    return true;
                 }
             }
+            return false;
         } else {
-            // Ищем во всех столбцах
-            for (int col = 0; col < sourceModel()->columnCount(); ++col) {
-                // Если заданы видимые столбцы, ищем только в них
-                if (!m_visibleColumns.isEmpty() && !m_visibleColumns.contains(col)) {
-                    continue;
-                }
-
-                QModelIndex index = sourceModel()->index(sourceRow, col, sourceParent);
-                QString data = sourceModel()->data(index, Qt::DisplayRole).toString();
-                if (data.contains(m_filterText, Qt::CaseInsensitive)) {
-                    textFound = true;
-                    break;
+            // Ищем по всем колонкам
+            for (int i = 0; i < sourceModel()->columnCount(); ++i) {
+                index = sourceModel()->index(sourceRow, i, sourceParent);
+                if (index.data().toString().contains(m_filterText, Qt::CaseInsensitive)) {
+                    return true;
                 }
             }
-        }
-
-        if (!textFound) {
             return false;
         }
     }
@@ -445,16 +421,42 @@ bool FilterProxyModel::filterAcceptsRow(int sourceRow, const QModelIndex& source
     return true;
 }
 
-// Фильтрация столбцов
 bool FilterProxyModel::filterAcceptsColumn(int sourceColumn, const QModelIndex& sourceParent) const
 {
     Q_UNUSED(sourceParent);
 
-    // Если список видимых столбцов пуст - показываем все столбцы
+    // Важно: проверяем, для какой модели вызывается фильтр
+    QString caller = objectName();
+
+    // Для отладки покажем первые вызовы для каждой модели
+    static QSet<QString> loggedModels;
+    if (!loggedModels.contains(caller) && !caller.isEmpty()) {
+        loggedModels.insert(caller);
+        qDebug() << "FilterProxyModel::filterAcceptsColumn для" << caller
+                 << "sourceColumn:" << sourceColumn
+                 << "m_visibleColumns:" << m_visibleColumns;
+    }
+
+    // Если список видимых колонок пуст, показываем все
     if (m_visibleColumns.isEmpty()) {
         return true;
     }
 
-    // Иначе проверяем, видим ли этот столбец
-    return m_visibleColumns.contains(sourceColumn);
+    // Проверяем, есть ли колонка в списке видимых
+    bool visible = m_visibleColumns.contains(sourceColumn);
+
+    // Для отладки покажем только rejection для виртуальных колонок results
+    if (!visible && sourceColumn >= 13 && caller.contains("Results")) {
+        qDebug() << "  ВНИМАНИЕ: виртуальная колонка" << sourceColumn
+                 << "скрыта для" << caller;
+    }
+
+    return visible;
+}
+
+void FilterProxyModel::onSourceModelChanged()
+{
+    // Сбрасываем видимые колонки при изменении модели
+    m_visibleColumns.clear();
+    invalidateFilter();
 }

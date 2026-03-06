@@ -7,6 +7,7 @@
 #include "PersonEditDialog.h"
 #include "DelegationEditDialog.h"
 #include "DatabaseManager.h"
+#include "ResultsProxyModel.h"
 
 #include "dialogs/PersonEditDialog.h"
 #include "dialogs/DelegationEditDialog.h"
@@ -85,7 +86,8 @@ MainWindow::MainWindow(QWidget *parent)
     m_csvImporter(new CsvImporter(this)),
     m_modelsInitialized(false),
     m_tablesConnected(false),
-    m_isModified(false)
+    m_isModified(false),
+    m_updatingTable(false)
 {
     ui->setupUi(this);
 
@@ -298,88 +300,220 @@ void MainWindow::initializeForDocument()
     // 1. Создаем модели (если нужно)
     if (m_tableModels.isEmpty()) {
         qDebug() << "Создаю модели...";
-        setupModels(); // В setupModels() теперь встроена установка фильтров и select()
-    } else {
-        qDebug() << "Модели уже созданы, обновляю фильтры...";
-
-        // Явно обновляем фильтры
-        updateCompetitionFilters();
+        setupModels(); // Здесь создаются модели и связываются с виджетами
     }
 
-    // 2. Настраиваем делегаты
-    setupDelegates();
-
-    // 3. Настраиваем видимость столбцов
+    // 2. СНАЧАЛА настраиваем видимость столбцов (до применения фильтров!)
+    qDebug() << "Настраиваю видимость столбцов...";
     setupColumnVisibility();
 
-    // 4. Обновляем UI
+    if (m_proxyModels.contains("results")) {
+        auto* proxy = m_proxyModels["results"];
+        qDebug() << "После setupColumnVisibility() - visible columns:"
+                 << proxy->visibleColumns();
+
+        // Принудительно показываем виртуальные колонки в tableView
+        int totalCols = proxy->columnCount();
+        for (int i = 0; i < totalCols; ++i) {
+            if (i >= m_tableModels["results"]->columnCount()) {
+                // Это виртуальная колонка
+                ui->tableResult->setColumnHidden(i, false);
+            }
+        }
+    }
+
+    // 3. Затем применяем фильтры и загружаем данные
+    qDebug() << "Применяю фильтры...";
+    applyCompetitionFilters(competitionId);
+
+    // 4. Настраиваем делегаты
+    setupDelegates();
+
+    // 5. Обновляем UI
     updateWindowTitle();
     updateStatusBar();
 
-    // 5. Дополнительное обновление через 100мс
+    // 6. Принудительно обновляем отображение
     QTimer::singleShot(100, this, [this]() {
         refreshAllTables();
+
+        if (m_proxyModels.contains("results")) {
+            auto* resultsProxy = qobject_cast<ResultsProxyModel*>(m_proxyModels["results"]);
+            if (resultsProxy) {
+                // Сбрасываем модель, чтобы view узнал о новой структуре колонок
+                resultsProxy->resetModelStructure();
+
+                // Пересчитываем ранги
+                resultsProxy->recalculateRanks();
+
+                // Явно показываем все колонки в tableView
+                for (int i = 0; i < resultsProxy->columnCount(); ++i) {
+                    ui->tableResult->setColumnHidden(i, false);
+                }
+
+                ui->tableResult->setSortingEnabled(false);
+
+                // Принудительно обновляем представление
+                ui->tableResult->viewport()->update();
+                ui->tableResult->reset();
+
+                qDebug() << "Results model reset and updated, columnCount:" << resultsProxy->columnCount();
+            }
+        }
+
+        // Убеждаемся, что все колонки видимы в QTableView
+        ui->tableResult->resizeColumnsToContents();
     });
 
-    qDebug() << "=== ИНИЦИАЛИЗАЦИЯ ЗАВЕРШЕНА ===";
+    // После всех настроек принудительно обновляем представление результатов
+    if (m_proxyModels.contains("results")) {
+        auto* resultsProxy = qobject_cast<ResultsProxyModel*>(m_proxyModels["results"]);
+        if (resultsProxy) {
+            // Сбрасываем модель, чтобы view узнал о новой структуре колонок
+            resultsProxy->resetModelStructure();
+
+            // Пересчитываем ранги
+            resultsProxy->recalculateRanks();
+
+            // ВАЖНО: ЯВНО ПОКАЗЫВАЕМ ВСЕ КОЛОНКИ
+            for (int i = 0; i < resultsProxy->columnCount(); ++i) {
+                ui->tableResult->setColumnHidden(i, false);
+                qDebug() << "  Column" << i << "hidden:" << ui->tableResult->isColumnHidden(i);
+            }
+
+            // Принудительно обновляем представление
+            ui->tableResult->reset();
+
+            qDebug() << "Results model reset and updated, columnCount:" << resultsProxy->columnCount();
+        }
+    }
+    // debugTableColumns();
 
     m_resultProcessor.reset(new ResultProcessor(m_document, this));
     connect(m_resultProcessor.data(), &ResultProcessor::resultProcessed,
             this, &MainWindow::onResultProcessed);
-    // connect(m_resultProcessor.data(), &ResultProcessor::participantNotFound,
-    //         this, &MainWindow::onParticipantNotFound);
-    qDebug() << "=== ResultProcessor подключен ===";
+
+    qDebug() << "=== ИНИЦИАЛИЗАЦИЯ ЗАВЕРШЕНА ===";
+}
+
+void MainWindow::applyCompetitionFilters(qint64 competitionId)
+{
+    qDebug() << "Применяю фильтры competition_id =" << competitionId;
+
+    for (auto it = m_tableModels.begin(); it != m_tableModels.end(); ++it) {
+        const QString& tableName = it.key();
+        SqlTableModel* model = it.value();
+
+        if (!model) continue;
+
+        // Для таблиц, которые фильтруются по competition_id
+        if (tableName == "participants" || tableName == "delegations" ||
+            tableName == "distances" || tableName == "age_groups") {
+
+            QString filter = QString("competition_id = %1").arg(competitionId);
+            qDebug() << "  Устанавливаю фильтр для" << tableName << ":" << filter;
+
+            model->setFilter(filter);
+
+            // Загружаем данные
+            if (!model->select()) {
+                qDebug() << "  Ошибка select() для" << tableName << ":"
+                         << model->lastError().text();
+            } else {
+                qDebug() << "  Таблица" << tableName << "загружена, строк:"
+                         << model->rowCount();
+            }
+
+            // Обновляем прокси
+            if (m_proxyModels.contains(tableName)) {
+                m_proxyModels[tableName]->invalidate();
+            }
+
+        } else if (tableName == "results") {
+            // Для результатов фильтр через participant_id
+            QString filter = QString(
+                                 "participant_id IN (SELECT id FROM participants WHERE competition_id = %1)"
+                                 ).arg(competitionId);
+
+            qDebug() << "  Устанавливаю фильтр для results:" << filter;
+            model->setFilter(filter);
+
+            if (!model->select()) {
+                qDebug() << "  Ошибка select() для results:"
+                         << model->lastError().text();
+            } else {
+                qDebug() << "  Таблица results загружена, строк:"
+                         << model->rowCount();
+            }
+
+            if (m_proxyModels.contains("results")) {
+                m_proxyModels["results"]->invalidate();
+
+                // Пересчитываем места
+                if (ResultsProxyModel* resultsProxy =
+                    qobject_cast<ResultsProxyModel*>(m_proxyModels["results"])) {
+
+                    // Добавляем отложенный пересчет
+                    QTimer::singleShot(100, resultsProxy, [resultsProxy]() {
+                        resultsProxy->recalculateRanks();
+                    });
+                }
+            }
+        }
+    }
 }
 
 void MainWindow::onResultProcessed(qint64 resultId, const SportIdent::CardData& cardData)
 {
-    qDebug() << "Результат обработан, ID:" << resultId << "Номер карты:" << cardData.cardNumber;
+    qDebug() << "Результат обработан, ID:" << resultId;
 
-    // 1. Обновляем модель результатов
-    if (m_tableModels.contains("results")) {
-        // Простой способ - перезагрузить всю таблицу
-        m_tableModels["results"]->select();
-
-        // 2. Находим строку с новым результатом и выделяем её
-        FilterProxyModel* proxyModel = m_proxyModels.value("results");
-        if (proxyModel) {
-            // Ищем запись в исходной модели
-            SqlTableModel* sourceModel = m_tableModels["results"];
-            for (int row = 0; row < sourceModel->rowCount(); ++row) {
-                QModelIndex index = sourceModel->index(row, 0); // ID в первой колонке
-                if (sourceModel->data(index).toLongLong() == resultId) {
-                    // Нашли, преобразуем в индекс прокси
-                    QModelIndex sourceIdx = sourceModel->index(row, 0);
-                    QModelIndex proxyIdx = proxyModel->mapFromSource(sourceIdx);
-
-                    // Выделяем строку в таблице
-                    ui->tableResult->selectionModel()->select(
-                        proxyIdx,
-                        QItemSelectionModel::Select | QItemSelectionModel::Rows
-                        );
-
-                    // Прокручиваем к выделенной строке
-                    ui->tableResult->scrollTo(proxyIdx);
-
-                    // Делаем таблицу результатов текущей вкладкой
-                    ui->tabWidget->setCurrentIndex(1); // 1 - вкладка с результатами
-
-                    qDebug() << "Результат выделен в таблице, строка:" << row;
-                    break;
-                }
-            }
-        }
-
-        // 3. Подгоняем столбцы
-        ui->tableResult->resizeColumnsToContents();
+    if (m_tablesBeingRefreshed.contains("results")) {
+        qDebug() << "Уже обновляем результаты, пропускаем";
+        return;
     }
 
-    // 4. Обновляем информацию о количестве результатов в статусной строке
-    updateStatusBar();
+    // Обновляем только таблицу результатов, не все таблицы
+    refreshTable("results");
 
-    // 5. Показываем сообщение в логе
+    // Пересчитываем места в прокси-модели
+    if (m_proxyModels.contains("results")) {
+        if (ResultsProxyModel* resultsProxy = qobject_cast<ResultsProxyModel*>(m_proxyModels["results"])) {
+            resultsProxy->recalculateRanks();
+        }
+    }
+
+    // Находим и выделяем запись
+    QTimer::singleShot(100, this, [this, resultId]() {
+        highlightResult(resultId);
+    });
+
+    updateStatusBar();
     logMessage(tr("Результат для карты %1 успешно добавлен (ID: %2)")
-                   .arg(QString::number(cardData.cardNumber), QString::number(resultId)));
+                   .arg(cardData.cardNumber).arg(resultId));
+}
+
+void MainWindow::highlightResult(qint64 resultId)
+{
+    if (!m_proxyModels.contains("results")) return;
+
+    AbstractProxyModel* proxy = m_proxyModels["results"];
+    SqlTableModel* sourceModel = m_tableModels["results"];
+
+    for (int row = 0; row < sourceModel->rowCount(); ++row) {
+        QModelIndex index = sourceModel->index(row, 0);
+        if (sourceModel->data(index).toLongLong() == resultId) {
+            QModelIndex sourceIdx = sourceModel->index(row, 0);
+            QModelIndex proxyIdx = proxy->mapFromSource(sourceIdx);
+
+            ui->tableResult->selectionModel()->select(
+                proxyIdx,
+                QItemSelectionModel::Select | QItemSelectionModel::Rows
+                );
+            ui->tableResult->scrollTo(proxyIdx);
+            ui->tabWidget->setCurrentIndex(1);
+            break;
+        }
+    }
 }
 
 void MainWindow::setupDelegates()
@@ -410,29 +544,32 @@ void MainWindow::setupModels()
 {
     qDebug() << "\n=== СОЗДАНИЕ МОДЕЛЕЙ ===";
 
-    clearModels();      // Очищаем старые модели если есть
+    clearModels();
+    auto& dbManager = DatabaseManager::instance();
 
-    auto& dbManager = DatabaseManager::instance();     // Получаем базу данных
-
-    // Создаем модели для всех таблиц
-    QStringList tables = {"participants", "delegations", "distances", "age_groups", "results"};
+    QStringList tables = {"participants", "results", "delegations", "distances", "age_groups"};
 
     for (const QString& tableName : tables) {
         qDebug() << "Создаю модель для:" << tableName;
 
         SqlTableModel* model = nullptr;
+        AbstractProxyModel* proxy = nullptr;
 
         dbManager.withDatabase([&](const QSqlDatabase& db) -> bool {
             model = new SqlTableModel(this, db);
 
             if (tableName == "participants") {
                 model->setTable("v_participants_details");
+            } else if (tableName == "results") {
+                model->setTable("v_results_details");
             } else {
                 model->setTable(tableName);
             }
 
+            // Устанавливаем заголовки ДО того, как модель будет заполнена
             setupColumnHeaders(model, tableName);
             setupHiddenColumns(model, tableName);
+
             model->setEditStrategy(QSqlTableModel::OnManualSubmit);
 
             return true;
@@ -440,81 +577,51 @@ void MainWindow::setupModels()
 
         if (!model) continue;
 
-        // Создаем FilterProxyModel
-        FilterProxyModel* proxy = new FilterProxyModel(this);
-        proxy->setSourceModel(model);
+        // Создаем прокси
+        if (tableName == "results") {
+            ResultsProxyModel* resultsProxy = new ResultsProxyModel(this);
+            resultsProxy->setSourceModel(model);
+            proxy = resultsProxy;
+
+            //resultsProxy->setObjectName("ResultsProxy");
+            resultsProxy->setObjectName("ResultsProxy_" + tableName); // ВАЖНО!
+            qDebug() << "  ResultsProxyModel created, columnCount:" << resultsProxy->columnCount();
+
+            connect(resultsProxy, &ResultsProxyModel::calculationStarted,
+                    this, []() { qDebug() << "Пересчет мест..."; });
+            connect(resultsProxy, &ResultsProxyModel::calculationFinished,
+                    this, []() { qDebug() << "Пересчет мест завершен"; });
+        } else {
+            FilterProxyModel* filterProxy = new FilterProxyModel(this);
+            filterProxy->setSourceModel(model);
+            filterProxy->setObjectName("FilterProxy_" + tableName); // ВАЖНО!
+            proxy = filterProxy;
+        }
 
         // Сохраняем
         m_tableModels[tableName] = model;
         m_proxyModels[tableName] = proxy;
 
-        // Подключаем сигнал о загрузке данных
-        connect(model, &SqlTableModel::dataLoaded, this, [this, tableName, model]() {
+        // Подключаем сигнал о загрузке данных (для отладки)
+        connect(model, &SqlTableModel::dataLoaded, this, [ tableName]() {
             qDebug() << "Данные загружены для таблицы:" << tableName;
-
-            // Определяем соответствующую таблицу
-            QTableView* tableView1 = nullptr;
-            if (tableName == "participants") tableView1 = ui->tablePerson;
-            else if (tableName == "results") tableView1 = ui->tableResult;
-            else if (tableName == "age_groups") tableView1 = ui->tableGroup;
-            else if (tableName == "distances") tableView1 = ui->tableDist;
-            else if (tableName == "delegations") tableView1 = ui->tableOrg;
-
-            if (tableView1 && model->rowCount() > 0) {
-                // Ждем один цикл обработки событий
-                QTimer::singleShot(0, tableView1, [tableView1]() {
-                    tableView1->resizeColumnsToContents();
-                    qDebug() << "Столбцы подогнаны для таблицы:" << tableView1->objectName();
-                });
-                tableView1->setEditTriggers(QAbstractItemView::NoEditTriggers);
-            }
         });
-
-        qDebug() << "  Создана модель и прокси для" << tableName;
     }
 
     // Связываем с виджетами
     connectModelsToWidgets();
 
-    // Только после связывания устанавливаем фильтры и вызываем select()
-    if (m_document && m_document->isOpen()) {
-        qint64 competitionId = m_document->competitionId();
-        qDebug() << "Устанавливаю фильтры competition_id =" << competitionId;
-
-        for (auto it = m_tableModels.begin(); it != m_tableModels.end(); ++it) {
-            if (it.value()) {
-                const QString& tableName = it.key();
-
-                // Для таблиц, которые должны фильтроваться по competition_id
-                if (tableName == "participants" || tableName == "delegations" ||
-                    tableName == "distances" || tableName == "age_groups") {
-
-                    QString filter = QString("competition_id = %1").arg(competitionId);
-                    qDebug() << "  Устанавливаю фильтр для" << tableName << ":" << filter;
-
-                    it.value()->setFilter(filter);
-
-                    // НЕМЕДЛЕННО вызываем select() после установки фильтра
-                    if (!it.value()->select()) {
-                        qDebug() << "Ошибка select() для" << tableName << ":"
-                                 << it.value()->lastError().text();
-                    } else {
-                        qDebug() << "  Таблица" << tableName << "загружена, строк:"
-                                 << it.value()->rowCount();
-                    }
-                } else if (tableName == "results") {
-                    // Для results нужно отдельная логика
-                    if (!it.value()->select()) {
-                        qDebug() << "Ошибка select() для results:"
-                                 << it.value()->lastError().text();
-                    }
-                }
-            }
-        }
-    }
-
     qDebug() << "Создано моделей:" << m_tableModels.size();
     qDebug() << "=== СОЗДАНИЕ МОДЕЛЕЙ ЗАВЕРШЕНО ===\n";
+
+    // Настройка заголовков для сортировки
+    QHeaderView* header = ui->tableResult->horizontalHeader();
+    header->setSectionsClickable(true);
+    header->setSortIndicatorShown(true);  // Показывать индикатор сортировки
+    header->setSortIndicator(-1, Qt::AscendingOrder);  // Сброс индикатора
+
+    // Установка политики сортировки
+    ui->tableResult->setSortingEnabled(true);
 }
 
 void MainWindow::setupColumnHeaders(SqlTableModel* model, const QString& tableName)
@@ -587,14 +694,18 @@ void MainWindow::setupColumnHeaders(SqlTableModel* model, const QString& tableNa
     else if (tableName == "results") {
         headers = {
             {0, "ID"},
-            {1, "ID участника"},
-            {2, "Номер чипа"},
-            {3, "Время старта"},
-            {4, "Время финиша"},
-            {5, "Результат"},
-            {6, "Статус"},
-            {7, "Создано"},
-            {8, "Обновлено"}
+            {1, "ФИО участника"},      // из participants
+            {2, "Возрастная группа"},    // из age_groups
+            {3, "Делегация"},           // из delegations через participants
+            {4, "Результат (сек)"},
+            {5, "Статус"},
+            {6, "Номер (bib)"},        // из participants
+            {7, "Номер чипа"},
+            {8, "Время старта"},
+            {9, "Время финиша"},
+            {10, "Пол"},                 // из participants
+            {11, "ID участника"},
+            {12, "Дистанция"}           // из distances
         };
     }
 
@@ -687,67 +798,102 @@ void MainWindow::setupHiddenColumns(SqlTableModel* model, const QString& tableNa
                       << 7; // Обновлено
     }
     else if (tableName == "results") {
-        hiddenColumns //<< 0  // ID
-                      << 7  // Создано
-                      << 8; // Обновлено
     }
     model->hideColumns(hiddenColumns);
 }
 
 void MainWindow::setupColumnVisibility()
 {
+    qDebug() << "=== setupColumnVisibility() ===";
+
     for (auto it = m_proxyModels.begin(); it != m_proxyModels.end(); ++it) {
         const QString& tableName = it.key();
-        FilterProxyModel* proxyModel = it.value();
+        AbstractProxyModel* proxyModel = it.value();
 
-        if (!m_tableModels.contains(tableName)) continue;
+        if (!m_tableModels.contains(tableName)) {
+            qDebug() << "  Пропускаю" << tableName << "- нет исходной модели";
+            continue;
+        }
 
-        SqlTableModel* sourceModel = m_tableModels[tableName];
         QList<int> visibleColumns;
 
         if (tableName == "participants") {
-            // Учитываем структуру VIEW v_participants_details
             visibleColumns = {
-                0,  // ID
-                5,  // bib_number (Номер)
-                3,  // full_name (ФИО)
-                11, // delegation_name (Делегация)
-                9,  // gender (Пол)
-                8,  // birth_date (Дата рождения)
-                12, // distance_name (Дистанция)
-                13, // age_group_name (Возрастная группа)
-                6,  // chip_number (Номер чипа)
-                7  // start_time (Время старта)
-                //2,  // participant_type (Тип участника)
-                //4   // team_name (Название команды)
+                3,  // full_name
+                5,  // bib_number
+                6,  // chip_number
+                9,  // gender
+                8,  // birth_date
+                11, // delegation_name
+                12, // distance_name
+                13  // age_group_name
             };
         }
         else if (tableName == "delegations") {
-            visibleColumns = {0, 2, 3, 4}; // name, representative, contact
+            visibleColumns = {2, 3, 4}; // name, representative, contact
         }
         else if (tableName == "distances") {
-            visibleColumns = {0, 2, 3, 4, 5}; // name, length, control_time, control_points
+            visibleColumns = {2, 3, 4, 5}; // name, length, control_time, control_points
         }
         else if (tableName == "age_groups") {
-            visibleColumns = {0, 2, 3, 4, 5}; // name, min_age, max_age, price
+            visibleColumns = {2, 3, 4, 5}; // name, min_age, max_age, price
         }
         else if (tableName == "results") {
-            visibleColumns = {0, 2, 3, 4, 5, 6}; // chip_number, start_time, finish_time, result_time, status
-        }
 
-        // Фильтруем невалидные индексы
-        visibleColumns.removeIf([](int col) { return col < 0; });
 
-        // Проверяем, что столбцы существуют в модели
-        QList<int> validColumns;
-        for (int col : visibleColumns) {
-            if (col < sourceModel->columnCount()) {
-                validColumns.append(col);
+            auto* proxy = m_proxyModels["results"];
+
+            int totalCols = proxy->columnCount();
+            qDebug() << "  Results - total columns:" << totalCols;
+
+            // Сначала получаем исходные колонки, которые хотим показать
+            // Индексы соответствуют исходной модели v_results_details
+            visibleColumns = {
+                0,  // ID (скрываем или показываем)
+                1,  // ФИО участника
+                2,  // Возрастная группа
+                3,  // Делегация
+                4,  // Результат (сек)
+                5,  // Статус (показываем для отладки, потом можно скрыть)
+                6,  // Номер (bib)
+                7,  // Номер чипа
+                8,  // Время старта
+                9,  // Время финиша
+                10, // Пол
+                12  // Дистанция
+            };
+
+            qDebug() << "  Results - исходные видимые колонки:" << visibleColumns;
+
+            // Добавляем виртуальные колонки
+            if (m_tableModels.contains("results")) {
+                int sourceColCount = m_tableModels["results"]->columnCount();
+                visibleColumns.append(sourceColCount + 0); // Место
+                visibleColumns.append(sourceColCount + 1); // Отставание
+                visibleColumns.append(sourceColCount + 2); // % от лидера
             }
+
+            qDebug() << "  Results - total columns with virtual:" << visibleColumns;
+
+
+            // Виртуальные колонки управляются напрямую в QTableView
+            ui->tableResult->setColumnHidden(13, false); // Место
+            ui->tableResult->setColumnHidden(14, false); // Отставание
+            ui->tableResult->setColumnHidden(15, false); // % от лидера
+
+
+            proxy->setVisibleColumns(visibleColumns);
+
+            // qDebug() << "  Results - visible columns:" << visibleColumns;
         }
 
-        proxyModel->setVisibleColumns(validColumns);
+        if (!visibleColumns.isEmpty()) {
+            proxyModel->setVisibleColumns(visibleColumns);
+            qDebug() << "  Установлена видимость для" << tableName << ":" << visibleColumns;
+        }
     }
+
+    qDebug() << "=== setupColumnVisibility() завершен ===";
 }
 
 void MainWindow::setupTableViewHeaders()
@@ -756,7 +902,6 @@ void MainWindow::setupTableViewHeaders()
     if (m_proxyModels.contains("participants")) {
         QTableView* tableView = ui->tablePerson;
 
-        // Если используем кастомный SQL запрос, порядок уже задан в запросе
         // Просто скрываем технические столбцы
         for (int i = 11; i <= 18; ++i) { // Скрываем технические столбцы
             tableView->setColumnHidden(i, true);
@@ -818,42 +963,87 @@ void MainWindow::refreshAllTables()
     qDebug() << "=== ЗАВЕРШЕНИЕ refreshAllTables() ===\n";
 }
 
+void MainWindow::onTableDataLoaded(const QString& tableName)
+{
+    qDebug() << "Данные загружены для таблицы:" << tableName;
+
+    QTableView* tableView1 = nullptr;
+    if (tableName == "participants") tableView1 = ui->tablePerson;
+    else if (tableName == "results") tableView1 = ui->tableResult;
+    else if (tableName == "age_groups") tableView1 = ui->tableGroup;
+    else if (tableName == "distances") tableView1 = ui->tableDist;
+    else if (tableName == "delegations") tableView1 = ui->tableOrg;
+
+    if (tableView1) {
+        // Используем singleShot для отложенного обновления
+        QTimer::singleShot(0, tableView1, [tableView1]() {
+            tableView1->resizeColumnsToContents();
+        });
+        tableView1->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    }
+
+    // Специальная обработка для таблицы результатов
+    if (tableName == "results" && m_proxyModels.contains("results")) {
+        if (ResultsProxyModel* resultsProxy = qobject_cast<ResultsProxyModel*>(m_proxyModels["results"])) {
+            // Пересчитываем места только если это действительно нужно
+            // и если не было вызвано из рекурсивного обновления
+            if (!m_updatingTable) {
+                resultsProxy->recalculateRanks();
+            }
+        }
+    }
+}
+
 void MainWindow::refreshTable(const QString& tableName)
 {
-    qDebug() << "\n=== ВЫЗОВ refreshTable(" << tableName << ") ===";
-
-    if (!m_document->isOpen()) {
-        qDebug() << "Документ не открыт, пропускаю обновление таблицы" << tableName;
+    // Защита от рекурсии
+    if (m_tablesBeingRefreshed.contains(tableName)) {
+        qDebug() << "Предотвращена рекурсия для таблицы:" << tableName;
         return;
     }
 
-    // Проверяем, есть ли модель для этой таблицы
+    m_tablesBeingRefreshed.insert(tableName);
+
+    qDebug() << "\n=== ВЫЗОВ refreshTable(" << tableName << ") ===";
+
+    if (!m_document || !m_document->isOpen()) {
+        qDebug() << "Документ не открыт, пропускаю обновление таблицы" << tableName;
+        m_tablesBeingRefreshed.remove(tableName);
+        return;
+    }
+
     if (!m_tableModels.contains(tableName)) {
         qWarning() << "Модель для таблицы" << tableName << "не найдена";
+        m_tablesBeingRefreshed.remove(tableName);
         return;
     }
 
     QSqlTableModel* model = m_tableModels.value(tableName);
     if (!model) {
         qWarning() << "Модель для таблицы" << tableName << "пуста (nullptr)";
+        m_tablesBeingRefreshed.remove(tableName);
         return;
     }
 
     if (!model->database().isOpen()) {
         qWarning() << "База данных для модели" << tableName << "закрыта";
+        m_tablesBeingRefreshed.remove(tableName);
         return;
     }
+
+    // Временно отключаем сигнал dataLoaded, чтобы избежать цикла
+    model->blockSignals(true);
 
     bool success = false;
     try {
         success = model->select();
     } catch (const std::exception& e) {
         qCritical() << "Исключение при обновлении таблицы" << tableName << ":" << e.what();
-        return;
     } catch (...) {
         qCritical() << "Неизвестное исключение при обновлении таблицы" << tableName;
-        return;
     }
+
+    model->blockSignals(false);
 
     if (!success) {
         qWarning() << "Ошибка обновления таблицы" << tableName << ":"
@@ -861,10 +1051,17 @@ void MainWindow::refreshTable(const QString& tableName)
     } else {
         qDebug() << "Таблица" << tableName << "успешно обновлена, строк:"
                  << model->rowCount();
+
+        // Явно вызываем обработчик загрузки данных, но с защитой от рекурсии
+        if (!m_updatingTable) {
+            m_updatingTable = true;
+            onTableDataLoaded(tableName);
+            m_updatingTable = false;
+        }
     }
 
     // Если эта таблица отображается на текущей вкладке — обновляем вид
-    int tabIndex = findTabIndexByTableName(tableName); // вам нужно реализовать эту функцию
+    int tabIndex = findTabIndexByTableName(tableName);
     if (tabIndex != -1 && tabIndex == ui->tabWidget->currentIndex()) {
         QTableView* tableView = getTableViewForTab(tabIndex);
         if (tableView) {
@@ -876,6 +1073,8 @@ void MainWindow::refreshTable(const QString& tableName)
     updateStatusBar();
 
     qDebug() << "=== ЗАВЕРШЕНИЕ refreshTable(" << tableName << ") ===\n";
+
+    m_tablesBeingRefreshed.remove(tableName);
 }
 
 int MainWindow::findTabIndexByTableName(const QString& tableName) const
@@ -889,225 +1088,6 @@ int MainWindow::findTabIndexByTableName(const QString& tableName) const
     }
     return -1; // не найдено
 }
-
-// void MainWindow::checkAndInitDatabase()
-// {
-//     qDebug() << "\n=== ПРОВЕРКА И ИНИЦИАЛИЗАЦИЯ БАЗЫ ===";
-
-//     // 1. Проверяем, открыта ли база
-//     auto& dbManager = DatabaseManager::instance();
-//     if (!dbManager.isOpen()) {
-//         qDebug() << "База не открыта. Пробуем инициализировать...";
-
-//         // Пробуем открыть базу по умолчанию
-//         if (!dbManager.initialize()) {
-//             qDebug() << "Не удалось инициализировать базу!";
-//             qDebug() << "Попробуем создать новую...";
-
-//             // Создаем новое соревнование через Document
-//             if (m_document->createNew()) {
-//                 qDebug() << "Новое соревнование создано!";
-//                 qDebug() << "Путь:" << m_document->filePath();
-//             } else {
-//                 qDebug() << "Не удалось создать соревнование!";
-//             }
-//         } else {
-//             qDebug() << "База успешно открыта";
-//         }
-//     } else {
-//         qDebug() << "База уже открыта";
-//         qDebug() << "Путь:" << dbManager.databasePath();
-//     }
-
-//     // 2. Проверяем таблицы
-//     QStringList tables = dbManager.tableNames();
-//     qDebug() << "Таблицы в базе (" << tables.size() << "):";
-//     for (const QString& table : tables) {
-//         qDebug() << "  - " << table;
-//     }
-
-//     // 3. Если таблиц нет, создаем их
-//     if (tables.isEmpty()) {
-//         qDebug() << "Таблиц нет. Пробуем создать структуру...";
-//         dbManager.checkAndCreateTables();
-
-//         tables = dbManager.tableNames();
-//         qDebug() << "После создания таблиц (" << tables.size() << "):";
-//         for (const QString& table : tables) {
-//             qDebug() << "  - " << table;
-//         }
-//     }
-
-//     qDebug() << "=== КОНЕЦ ПРОВЕРКИ ===\n";
-// }
-
-// void MainWindow::checkViewStructure()
-// {
-//     qDebug() << "=== Начало checkViewStructure ===\n";
-//     auto& dbManager = DatabaseManager::instance();
-
-//     // Проверим структуру VIEW
-//     QString sql = "SELECT * FROM v_participants_details LIMIT 0";
-//     QSqlQuery query(dbManager.database());
-
-//     if (query.exec(sql)) {
-//         QSqlRecord rec = query.record();
-//         qDebug() << "=== Структура VIEW v_participants_details ===";
-//         qDebug() << "Количество столбцов:" << rec.count();
-
-//         for (int i = 0; i < rec.count(); ++i) {
-//             qDebug() << "  Колонка" << i << "->" << rec.fieldName(i);
-//         }
-
-//         // Проверим одну запись
-//         QString dataSql = "SELECT * FROM v_participants_details LIMIT 1";
-//         if (query.exec(dataSql) && query.next()) {
-//             qDebug() << "=== Пример данных из VIEW ===";
-//             for (int i = 0; i < rec.count(); ++i) {
-//                 qDebug() << "  " << rec.fieldName(i) << ":" << query.value(i).toString();
-//             }
-//         }
-//     } else {
-//         qDebug() << "Ошибка проверки VIEW:" << query.lastError().text();
-//     }
-
-//     qDebug() << "=== конец checkViewStructure ===\n";
-// }
-
-// void MainWindow::checkFinalTableDisplay()
-// {
-//     if (!ui->tablePerson || !ui->tablePerson->model()) {
-//         qDebug() << "Таблица participants не инициализирована";
-//         return;
-//     }
-
-//     QAbstractItemModel* model = ui->tablePerson->model();
-//     qDebug() << "=== ПРОВЕРКА ОТОБРАЖЕНИЯ В ТАБЛИЦЕ ===";
-//     qDebug() << "Столбцов в отображении:" << model->columnCount();
-//     qDebug() << "Строк в отображении:" << model->rowCount();
-
-//     // Проверим заголовки
-//     qDebug() << "Заголовки столбцов:";
-//     for (int i = 0; i < model->columnCount(); ++i) {
-//         QString header = model->headerData(i, Qt::Horizontal, Qt::DisplayRole).toString();
-//         bool isHidden = ui->tablePerson->isColumnHidden(i);
-//         qDebug() << QString("  [%1] '%2': %3")
-//                         .arg(i, 2)
-//                         .arg(header, -30)
-//                         .arg(isHidden ? "скрыт в QTableView" : "видим");
-//     }
-
-//     // Проверим первые несколько строк
-//     int rowsToCheck = qMin(3, model->rowCount());
-//     qDebug() << "Первые" << rowsToCheck << "строк данных в отображении:";
-
-//     for (int row = 0; row < rowsToCheck; ++row) {
-//         qDebug() << "  Строка" << row << ":";
-//         for (int col = 0; col < qMin(10, model->columnCount()); ++col) { // Первые 10 столбцов
-//             if (!ui->tablePerson->isColumnHidden(col)) {
-//                 QString header = model->headerData(col, Qt::Horizontal, Qt::DisplayRole).toString();
-//                 QString data = model->data(model->index(row, col), Qt::DisplayRole).toString();
-//                 if (!data.isEmpty()) {
-//                     qDebug() << QString("    [%1] %2: %3")
-//                                     .arg(col, 2)
-//                                     .arg(header, -20)
-//                                     .arg(data);
-//                 }
-//             }
-//         }
-//     }
-// }
-
-// void MainWindow::debugCheckModels()
-// {
-//     qDebug() << "\n=== ПРОВЕРКА МОДЕЛЕЙ ===";
-
-//     // 1. Проверяем таблицы
-//     qDebug() << "1. Виджеты таблиц:";
-//     qDebug() << "   tablePerson:" << ui->tablePerson;
-//     qDebug() << "   tableResult:" << ui->tableResult;
-//     qDebug() << "   tableGroup:" << ui->tableGroup;
-//     qDebug() << "   tableDist:" << ui->tableDist;
-//     qDebug() << "   tableOrg:" << ui->tableOrg;
-
-//     // 2. Проверяем модели
-//     qDebug() << "\n2. Модели в m_tableModels:";
-//     for (auto it = m_tableModels.constBegin(); it != m_tableModels.constEnd(); ++it) {
-//         SqlTableModel* model = it.value();
-//         qDebug() << "   " << it.key() << ":";
-//         qDebug() << "     Указатель:" << model;
-//         if (model) {
-//             qDebug() << "     Таблица:" << model->tableName();
-//             qDebug() << "     Строк:" << model->rowCount();
-//             qDebug() << "     Колонок:" << model->columnCount();
-//             qDebug() << "     Ошибка:" << model->lastError().text();
-//         }
-//     }
-
-//     // 3. Проверяем прокси-модели
-//     qDebug() << "\n3. Прокси-модели в m_proxyModels:";
-//     for (auto it = m_proxyModels.constBegin(); it != m_proxyModels.constEnd(); ++it) {
-//         FilterProxyModel* proxy = it.value();
-//         qDebug() << "   " << it.key() << ":";
-//         qDebug() << "     Указатель:" << proxy;
-//         if (proxy) {
-//             qDebug() << "     Исходная модель:" << proxy->sourceModel();
-//             qDebug() << "     Строк:" << proxy->rowCount();
-//         }
-//     }
-
-//     // 4. Проверяем связь виджетов с моделями
-//     qDebug() << "\n4. Связь виджетов с моделями:";
-//     qDebug() << "   tablePerson модель:" << ui->tablePerson->model();
-//     qDebug() << "   tableResult модель:" << ui->tableResult->model();
-//     qDebug() << "   tableGroup модель:" << ui->tableGroup->model();
-//     qDebug() << "   tableDist модель:" << ui->tableDist->model();
-//     qDebug() << "   tableOrg модель:" << ui->tableOrg->model();
-
-//     // 5. Проверяем заголовки
-//     qDebug() << "\n5. Заголовки таблиц:";
-//     QList<QTableView*> tables = {ui->tablePerson, ui->tableResult, ui->tableGroup,
-//                                   ui->tableDist, ui->tableOrg};
-//     QStringList names = {"Участники", "Результаты", "Группы", "Дистанции", "Организации"};
-
-//     for (int i = 0; i < tables.size(); ++i) {
-//         if (tables[i] && tables[i]->model()) {
-//             qDebug() << "   " << names[i] << ":";
-//             qDebug() << "     Горизонтальные заголовки:" << tables[i]->horizontalHeader()->count();
-//             qDebug() << "     Вертикальные заголовки:" << tables[i]->verticalHeader()->count();
-//         }
-//     }
-
-//     qDebug() << "=== КОНЕЦ ПРОВЕРКИ ===\n";
-// }
-
-// void MainWindow::debugHiddenColumns()
-// {
-//     if (!m_tableModels.contains("participants")) return;
-
-//     SqlTableModel* model = m_tableModels["participants"];
-//     qDebug() << "=== ПРОВЕРКА СКРЫТЫХ СТОЛБЦОВ participants ===";
-
-//     // Получим реальные имена полей из VIEW
-//     QStringList realFieldNames = {
-//         "id", "competition_id", "participant_type", "full_name", "team_name",
-//         "bib_number", "chip_number", "start_time", "birth_date", "gender",
-//         "team_size", "delegation_name", "distance_name", "age_group_name",
-//         "delegation_id", "distance_id", "age_group_id", "created_at", "updated_at"
-//     };
-
-//     for (int i = 0; i < model->columnCount(); ++i) {
-//         QString displayHeader = model->headerData(i, Qt::Horizontal, Qt::DisplayRole).toString();
-//         QString realFieldName = (i < realFieldNames.size()) ? realFieldNames[i] : "?";
-//         bool isHidden = model->m_hiddenColumns.contains(i);
-
-//         qDebug() << QString("  Колонка %1 [%2] -> '%3': %4")
-//                         .arg(i, 2)
-//                         .arg(realFieldName, -20)
-//                         .arg(displayHeader, -30)
-//                         .arg(isHidden ? "СКРЫТ" : "ВИДИМ");
-//     }
-// }
 
 void MainWindow::setupUi()
 {
@@ -1170,6 +1150,13 @@ void MainWindow::initActionsConnections()
             this, &MainWindow::onCsvImportFinished);
     connect(m_csvImporter, &CsvImporter::errorOccurred,
             this, &MainWindow::onCsvImportError);
+
+    connect(ui->tableResult->horizontalHeader(), &QHeaderView::sectionClicked,
+        this, [this](int logicalIndex) {
+            if (auto* model = ui->tableResult->model()) {
+                model->sort(logicalIndex, ui->tableResult->horizontalHeader()->sortIndicatorOrder());
+            }
+    });
 }
 
 void MainWindow::setupConnections()
@@ -1266,18 +1253,11 @@ void MainWindow::onCardRemoved() {
 }
 
 void MainWindow::onCardReadComplete(const SportIdent::CardData& cardData) {
-    // displayCardData(cardData);
-    // logMessage(tr("Данные карты %1 получены").arg(cardData.cardNumber));
-    // logMessage(tr("Старт %1, финиш %2")
-    //                .arg(cardData.startTime.time().toString(),
-    //                     cardData.finishTime.time().toString()));
-
     m_resultProcessor->processCardData(cardData, this);
 }
 
 void MainWindow::onStationConnected(const SportIdent::StationInfo& info) {
-    //ui->lblStationInfo->setText
-        logMessage(
+    logMessage(
         tr("Станция %1 (SN: %2, FW: %3)")
             .arg(info.stationCode)
             .arg(info.serialNumber)
@@ -1289,21 +1269,17 @@ void MainWindow::onStationConnected(const SportIdent::StationInfo& info) {
 
 void MainWindow::onErrorOccurred(const QString& errorMessage) {
     m_lastError = errorMessage;
-    //ui->lblLastError->setText(errorMessage);
     logMessage(tr("Ошибка: %1").arg(errorMessage));
 
     QMessageBox::warning(this, tr("Ошибка"), errorMessage);
 }
 
 void MainWindow::onDebugMessage(const QString& message) {
-    //logMessage(tr("Отладка: %1").arg(message));
     qDebug() << message;
 }
 
 void MainWindow::logMessage(const QString& message) {
     QString msg = message;
-    // QString timestamp = QDateTime::currentDateTime().toString("hh:mm:ss");
-    // ui->teLog->append(QString("[%1] %2").arg(timestamp, message));
     showStatusMessage(msg);
 }
 
@@ -1315,7 +1291,6 @@ void MainWindow::showStatusMessage(const QString &message)
 
 void MainWindow::displayCardData(const SportIdent::CardData& cardData) {
     // Основная информация
-    // ui->leCardNumber->setText(QString::number(cardData.cardNumber));
 
     QString typeStr;
     switch (cardData.cardType) {
@@ -1325,101 +1300,40 @@ void MainWindow::displayCardData(const SportIdent::CardData& cardData) {
     case SportIdent::CardType::SIAC: typeStr = "SIAC"; break;
     default: typeStr = "Unknown"; break;
     }
-    //ui->leCardType->setText(typeStr);
     ui_log_msg(typeStr);
-
-    // Времена
-    // ui->leStartTime->setText(
-    //     cardData.startTime.isValid() ?
-    //         cardData.startTime.toString("dd.MM.yyyy hh:mm:ss.zzz") :
-    //         tr("Нет данных")
-    //     );
-
-    // ui->leFinishTime->setText(
-    //     cardData.finishTime.isValid() ?
-    //         cardData.finishTime.toString("dd.MM.yyyy hh:mm:ss.zzz") :
-    //         tr("Нет данных")
-    //     );
-
-    // ui->leCheckTime->setText(
-    //     cardData.checkTime.isValid() ?
-    //         cardData.checkTime.toString("dd.MM.yyyy hh:mm:ss.zzz") :
-    //         tr("Нет данных")
-    //     );
-
-    // ui->leClearTime->setText(
-    //     cardData.clearTime.isValid() ?
-    //         cardData.clearTime.toString("dd.MM.yyyy hh:mm:ss.zzz") :
-    //         tr("Нет данных")
-    //     );
-
-    // // Личная информация (для SI10)
-    // ui->leFirstName->setText(cardData.firstName);
-    // ui->leLastName->setText(cardData.lastName);
-    // ui->leOrganization->setText(cardData.organization);
-    // ui->leStartNumber->setText(
-    //     cardData.startNumber > 0 ?
-    //         QString::number(cardData.startNumber) :
-    //         ""
-    //     );
-
-    // // Отметки
-    // ui->tablePunches->setRowCount(cardData.punches.size());
-
-    // for (int i = 0; i < cardData.punches.size(); ++i) {
-    //     const auto& punch = cardData.punches[i];
-
-    //     QTableWidgetItem* controlItem = new QTableWidgetItem(
-    //         QString::number(punch.controlCode)
-    //         );
-    //     QTableWidgetItem* timeItem = new QTableWidgetItem(
-    //         punch.timestamp.toString("hh:mm:ss.zzz")
-    //         );
-    //     QTableWidgetItem* subsecondItem = new QTableWidgetItem(
-    //         QString::number(punch.subsecond)
-    //         );
-
-    //     ui->tablePunches->setItem(i, 0, controlItem);
-    //     ui->tablePunches->setItem(i, 1, timeItem);
-    //     ui->tablePunches->setItem(i, 2, subsecondItem);
-    // }
-
-    // Количество отметок
-    // ui->lePunchCount->setText(
-    //     QString("%1 / %2").arg(cardData.punches.size()).arg(cardData.punchCount)
-    //     );
 }
 
 void MainWindow::connectModelsToWidgets()
 {
     qDebug() << "Связываю модели с виджетами...";
 
+    // Сначала связываем обычные модели
     if (m_proxyModels.contains("participants")) {
         ui->tablePerson->setModel(m_proxyModels["participants"]);
-        // Автоматически подгоняем столбцы после установки модели
-        QTimer::singleShot(0, ui->tablePerson, &QTableView::resizeColumnsToContents);
-        qDebug() << "  participants > tablePerson";
-    }
-    if (m_proxyModels.contains("results")) {
-        ui->tableResult->setModel(m_proxyModels["results"]);
-        QTimer::singleShot(0, ui->tableResult, &QTableView::resizeColumnsToContents);
-        qDebug() << "  results > tableResult";
     }
     if (m_proxyModels.contains("age_groups")) {
         ui->tableGroup->setModel(m_proxyModels["age_groups"]);
-        QTimer::singleShot(0, ui->tableGroup, &QTableView::resizeColumnsToContents);
-        qDebug() << "  age_groups > tableGroup";
     }
     if (m_proxyModels.contains("distances")) {
         ui->tableDist->setModel(m_proxyModels["distances"]);
-        QTimer::singleShot(0, ui->tableDist, &QTableView::resizeColumnsToContents);
-        qDebug() << "  distances > tableDist";
     }
     if (m_proxyModels.contains("delegations")) {
         ui->tableOrg->setModel(m_proxyModels["delegations"]);
-        QTimer::singleShot(0, ui->tableOrg, &QTableView::resizeColumnsToContents);
-        qDebug() << "  delegations > tableOrg";
     }
+
+    // Results подключаем сразу, без задержки
+    if (m_proxyModels.contains("results")) {
+        ui->tableResult->setModel(m_proxyModels["results"]);
+    }
+
+    // Подгоняем столбцы после установки моделей
+    QTimer::singleShot(100, this, [this]() {
+        ui->tablePerson->resizeColumnsToContents();
+        ui->tableGroup->resizeColumnsToContents();
+        ui->tableDist->resizeColumnsToContents();
+        ui->tableOrg->resizeColumnsToContents();
+        ui->tableResult->resizeColumnsToContents();
+    });
 }
 
 void MainWindow::on_act_save_triggered()
@@ -1751,44 +1665,6 @@ void MainWindow::showImportResults(int successCount, int errorCount, const QStri
     updateStatusBar();
 }
 
-
-// void MainWindow::clearModels()
-// {
-//     qDebug() << "Очищаем модели...";
-
-//     // Отсоединяем модели от виджетов
-//     ui->tablePerson->setModel(nullptr);
-//     ui->tableResult->setModel(nullptr);
-//     ui->tableGroup->setModel(nullptr);
-//     ui->tableDist->setModel(nullptr);
-//     ui->tableOrg->setModel(nullptr);
-
-//     // Удаляем прокси-модели
-//     for (auto it = m_proxyModels.begin(); it != m_proxyModels.end(); ++it) {
-//         if (it.value()) {
-//             it.value()->deleteLater();
-//         }
-//     }
-//     m_proxyModels.clear();
-
-//     // Удаляем модели
-//     for (auto it = m_tableModels.begin(); it != m_tableModels.end(); ++it) {
-//         if (it.value()) {
-//             it.value()->deleteLater();
-//         }
-//     }
-//     m_tableModels.clear();
-
-//     // Очищаем Undo stack
-//     UndoStack::instance().clear();
-
-//     // Сбрасываем флаги
-//     m_modelsInitialized = false;
-//     m_tablesConnected = false;
-
-//     qDebug() << "Модели очищены";
-// }
-
 void MainWindow::clearModels()
 {
     qDebug() << "Очищаем модели...";
@@ -1801,7 +1677,8 @@ void MainWindow::clearModels()
     ui->tableOrg->setModel(nullptr);
 
     // Удаляем прокси-модели
-    for (FilterProxyModel* proxy : qAsConst(m_proxyModels)) {
+    // for (FilterProxyModel* proxy : qAsConst(m_proxyModels)) {
+    for (auto* proxy : qAsConst(m_proxyModels)) {
         if (proxy) {
             proxy->setSourceModel(nullptr); // Важно: отключаем от исходной модели
             proxy->deleteLater();
@@ -1834,6 +1711,27 @@ void MainWindow::onDocumentOpened()
     // Даем время на завершение открытия БД
     QTimer::singleShot(150, this, [this]() {
         initializeForDocument();
+    });
+
+    QTimer::singleShot(500, this, [this]() {
+        qDebug() << "=== ПРИНУДИТЕЛЬНОЕ ОБНОВЛЕНИЕ ТАБЛИЦЫ РЕЗУЛЬТАТОВ ===";
+
+        // Перезапрашиваем данные для всех видимых ячеек
+        QAbstractItemModel* model = ui->tableResult->model();
+        if (model) {
+            QModelIndex tl = model->index(0, 13);
+            QModelIndex br = model->index(model->rowCount() - 1, 15);
+            QMetaObject::invokeMethod(
+                model,
+                "dataChanged",
+                Qt::QueuedConnection,
+                Q_ARG(QModelIndex, tl),
+                Q_ARG(QModelIndex, br)
+                );
+        }
+
+        // Принудительная перерисовка
+        ui->tableResult->viewport()->update();
     });
 }
 
@@ -2167,7 +2065,8 @@ void MainWindow::onDoubleClickRecord(const QModelIndex& index)
         return;
     }
 
-    FilterProxyModel* proxyModel = m_proxyModels[tableName];
+    //FilterProxyModel* proxyModel = m_proxyModels[tableName];
+    AbstractProxyModel* proxyModel = m_proxyModels[tableName];
 
     // Преобразуем индекс из прокси в исходную модель
     QModelIndex sourceIndex = proxyModel->mapToSource(index);
@@ -2219,7 +2118,8 @@ void MainWindow::onDeleteRecord()
     }
 
     // Используем метод recordId() из прокси-модели
-    FilterProxyModel* proxyModel = m_proxyModels[m_currentTable];
+    // FilterProxyModel* proxyModel = m_proxyModels[m_currentTable];
+    AbstractProxyModel* proxyModel = m_proxyModels[m_currentTable];
     if (!proxyModel) {
         return;
     }

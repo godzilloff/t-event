@@ -42,6 +42,11 @@ set(PROJECT_SOURCES
         src/models/SqlTableModel.h
         src/models/SqlTableModel.cpp
 
+        src/models/ResultColumns.h
+        src/models/AbstractProxyModel.h
+        src/models/ResultsProxyModel.h
+        src/models/ResultsProxyModel.cpp
+
         src/dialogs/EditDialogBase.h
         src/dialogs/EditDialogBase.cpp
 

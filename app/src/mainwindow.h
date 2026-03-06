@@ -16,6 +16,7 @@
 
 #include "core/ResultProcessor.h"
 
+#include "AbstractProxyModel.h"
 #include "serial/isportident_interface.h"
 
 QT_BEGIN_NAMESPACE
@@ -70,6 +71,7 @@ private slots:
     void onErrorOccurred(const QString& errorMessage);
     void onDebugMessage(const QString& message);
     void onResultProcessed(qint64 resultId, const SportIdent::CardData& cardData);
+    void highlightResult(qint64 resultId);
 
     // Документ
     void onDocumentOpened();
@@ -149,6 +151,7 @@ private:
     void setupMenuBar();
     void initializeForDocument();
     void closeCurrentDocument();
+    void applyCompetitionFilters(qint64 competitionId);
 
     // Модели и таблицы
     void setupModels();
@@ -168,6 +171,7 @@ private:
     //void debugCheckModels();
     //void debugHiddenColumns();
     void refreshAllTables();
+    void onTableDataLoaded(const QString& tableName);
     void refreshTable(const QString& tableName);
     int findTabIndexByTableName(const QString& tableName) const;
     bool hasCompetitionIdField(const QString& tableName);
@@ -239,7 +243,7 @@ private:
 
     // Модели данных
     QMap<QString, SqlTableModel*> m_tableModels;
-    QMap<QString, FilterProxyModel*> m_proxyModels;
+    QMap<QString, AbstractProxyModel*> m_proxyModels;
     QMap<int, QString> m_tabTableMap;
 
     // Undo/Redo
@@ -250,6 +254,8 @@ private:
     bool m_tablesConnected;
     QString m_currentTable;
     bool m_isModified;
+    bool m_updatingTable; // Флаг для предотвращения рекурсивных обновлений
+    QSet<QString> m_tablesBeingRefreshed; // Какие таблицы сейчас обновляются
 };
 
 #endif // MAINWINDOW_H
