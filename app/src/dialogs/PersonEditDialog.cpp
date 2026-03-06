@@ -171,7 +171,7 @@ void PersonEditDialog::createMainTab(QWidget* tab)
     // Номер чипа
     m_labelChip = new QLabel(tr("Номер чипа:"));
     m_editChip = new QLineEdit();
-    m_editChip->setValidator(new QIntValidator(1, 999999, this));
+    m_editChip->setValidator(new QIntValidator(1, 99999999, this));
     m_editChip->setMaximumWidth(120);
     m_formLayout->addRow(m_labelChip, m_editChip);
 
