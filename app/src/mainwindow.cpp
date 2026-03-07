@@ -472,8 +472,7 @@ void MainWindow::onResultProcessed(qint64 resultId, const SportIdent::CardData& 
         return;
     }
 
-    // Обновляем только таблицу результатов, не все таблицы
-    refreshTable("results");
+    refreshAllTables();
 
     // Пересчитываем места в прокси-модели
     if (m_proxyModels.contains("results")) {
@@ -483,7 +482,7 @@ void MainWindow::onResultProcessed(qint64 resultId, const SportIdent::CardData& 
     }
 
     // Находим и выделяем запись
-    QTimer::singleShot(100, this, [this, resultId]() {
+    QTimer::singleShot(30, this, [this, resultId]() {
         highlightResult(resultId);
     });
 
@@ -1353,7 +1352,7 @@ void MainWindow::onAct_import_csv_orgeo_ru_triggered()
 {
     ui_log_msg("onAct_import_csv_orgeo_ru_triggered");
 
-    if (!m_document->isOpen()) {
+    if (!m_document || !m_document->isOpen()) {
         QMessageBox::warning(this, tr("Ошибка"),
                              tr("Откройте или создайте соревнование перед импортом"));
         return;
