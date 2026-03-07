@@ -16,6 +16,7 @@ public:
     virtual ~ISportIdentInterface() = default;
 
     // Подключение/отключение
+    virtual void reset() = 0;
     virtual bool connectToStation(const QString& portName, int baudRate = 38400) = 0; // Изменили имя
     virtual void disconnectToStation() = 0;
     virtual bool isConnectedToStation() const = 0;

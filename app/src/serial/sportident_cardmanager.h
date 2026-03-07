@@ -27,6 +27,7 @@ public:
     void handleError(const QString& error);
     
     // Состояние
+    void reset();
     bool isReading() const { return m_session.inProgress(); }
     bool isComplete() const { return m_session.isComplete(); }
     CardData getCardData() const { return m_session.decodedData; }

@@ -21,6 +21,7 @@ public:
     ~SportIdentStation() override;
 
     // Подключение/отключение
+    void reset() override;
     bool connectToStation(const QString& portName, int baudRate = 38400) override;
     void disconnectToStation() override;
     bool isConnectedToStation() const override { return m_serialPort && m_serialPort->isOpen(); }

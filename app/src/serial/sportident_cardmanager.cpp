@@ -151,6 +151,29 @@ void CardReadManager::handleError(const QString& error) {
     }
 }
 
+void CardReadManager::reset() {
+    cancelReading();  // Отменяем текущее чтение если есть
+
+    // Полный сброс всех внутренних состояний
+    m_retryCount = 0;
+    m_autoAcknowledge = true;
+    m_readAllBlocks = false;
+    m_maxRetries = MAX_RETRIES;
+
+    // Останавливаем все таймеры
+    if (m_timeoutTimer) {
+        m_timeoutTimer->stop();
+    }
+    if (m_retryTimer) {
+        m_retryTimer->stop();
+    }
+
+    // Сбрасываем сессию
+    m_session.reset();
+
+    emit debugMessage(tr("CardReadManager reset complete"));
+}
+
 void CardReadManager::onTimeout() {
     if (!m_session.inProgress()) {
         return;

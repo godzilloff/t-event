@@ -58,7 +58,43 @@ SportIdentStation::~SportIdentStation() {
     disconnectToStation();
 }
 
+void SportIdentStation::reset() {
+    emit debugMessage(tr("Resetting SportIdentStation..."));
+
+    // Отключаемся если подключены
+    if (isConnectedToStation()) {
+        disconnectToStation();
+    }
+
+    // Полный сброс менеджера карт
+    if (m_cardManager) {
+        m_cardManager->reset();
+    }
+
+    // Сброс всех состояний
+    m_connected = false;
+    m_legacyProtocol = false;
+    m_autoAcknowledge = true;
+    m_readAllBlocks = false;
+    m_maxRetries = MAX_RETRIES;
+    m_readBuffer.clear();
+    m_commandQueue.clear();
+
+    // Уничтожаем и создаем заново serial port
+    //m_serialPort.reset();  // Удаляем старый порт
+
+    emit debugMessage(tr("SportIdentStation reset complete"));
+}
+
 bool SportIdentStation::connectToStation(const QString& portName, int baudRate) {
+    if (m_connected) {
+        emit debugMessage(tr("Already connected, disconnecting first..."));
+        disconnectToStation();
+    }
+
+    if (m_serialPort) {
+        m_serialPort.reset();  // Удаляем старый порт если есть
+    }
 
     try {
         m_portName = portName;

@@ -1222,8 +1222,10 @@ void MainWindow::onConnectClicked() {
             ui->act_comport_dialogset->setEnabled(false);
             showStatusMessage(tr("Connected to %1 : %2, %3")
                                   .arg(settingsComport.name, settingsComport.stringBaudRate, settingsComport.stringFlowControl));
+        } else {
+            fl_connectedComport = false;
+            showStatusMessage(tr("Failed to connect to %1").arg(port));
         }
-        else fl_connectedComport = false;
     }
     else {
         // Disconnect
@@ -1231,7 +1233,8 @@ void MainWindow::onConnectClicked() {
         ui->act_connect_comport->setIcon(QIcon(":/rec/img/disconnect.png"));
         ui->act_comport_dialogset->setEnabled(true);
         showStatusMessage(tr("Disconnected"));
-        m_siStation->disconnect();
+        m_siStation->disconnectToStation();
+        m_siStation->reset();
     }
 }
 
