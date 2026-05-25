@@ -18,8 +18,11 @@ class DelegationEditDialog : public EditDialogBase
 
 public:
     explicit DelegationEditDialog(Document* document, qint64 recordId = -1,
-                                    QWidget* parent = nullptr);
+                                  QWidget* parent = nullptr);
     ~DelegationEditDialog();
+
+signals:
+    void delegationCreated(qint64 id, const QString& name);  // Сигнал для создания
 
 protected:
     void setupUi() override;

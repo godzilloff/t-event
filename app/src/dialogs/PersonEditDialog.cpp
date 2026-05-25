@@ -81,6 +81,12 @@ PersonEditDialog::PersonEditDialog(Document* document, qint64 recordId, QWidget*
     setupUi();
     setupComboBoxes();
 
+    // Подключаем сигналы для кнопок создания
+    if (m_btnNewDelegation) {
+        connect(m_btnNewDelegation, &QPushButton::clicked,
+                this, &PersonEditDialog::onNewDelegationClicked);
+    }
+
     // Потом загружаем данные
     if (!isNewRecord()) {
         loadData();
@@ -177,9 +183,20 @@ void PersonEditDialog::createMainTab(QWidget* tab)
 
     // Делегация
     m_labelDelegation = new QLabel(tr("Делегация:"));
+
+    QHBoxLayout* delegationLayout = new QHBoxLayout();
     m_comboDelegation = new QComboBox();
     m_comboDelegation->setMinimumWidth(200);
-    m_formLayout->addRow(m_labelDelegation, m_comboDelegation);
+    m_comboDelegation->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+    m_btnNewDelegation = new QPushButton(tr("+"));
+    m_btnNewDelegation->setFixedSize(25, 25);
+    m_btnNewDelegation->setToolTip(tr("Создать новую делегацию"));
+    m_btnNewDelegation->setCursor(Qt::PointingHandCursor);
+
+    delegationLayout->addWidget(m_comboDelegation);
+    delegationLayout->addWidget(m_btnNewDelegation);
+    m_formLayout->addRow(m_labelDelegation, delegationLayout);
 
     // Дистанция
     m_labelDistance = new QLabel(tr("Дистанция:"));
@@ -230,6 +247,83 @@ void PersonEditDialog::createMainTab(QWidget* tab)
     groupBox->setLayout(m_formLayout);
     tabLayout->addWidget(groupBox);
     tabLayout->addStretch();
+}
+
+void PersonEditDialog::onNewDelegationClicked()
+{
+    if (!m_document) {
+        QMessageBox::warning(this, tr("Ошибка"), tr("Документ не открыт"));
+        return;
+    }
+
+    // Создаем диалог для ввода названия делегации
+    QDialog dialog(this);
+    dialog.setWindowTitle(tr("Создание делегации"));
+    dialog.setModal(true);
+
+    QVBoxLayout* layout = new QVBoxLayout(&dialog);
+    QFormLayout* formLayout = new QFormLayout();
+
+    QLineEdit* nameEdit = new QLineEdit();
+    QLineEdit* representativeEdit = new QLineEdit();
+    QLineEdit* contactEdit = new QLineEdit();
+
+    formLayout->addRow(tr("Название:"), nameEdit);
+    formLayout->addRow(tr("Представитель:"), representativeEdit);
+    formLayout->addRow(tr("Контакт:"), contactEdit);
+
+    QDialogButtonBox* buttonBox = new QDialogButtonBox(
+        QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+
+    layout->addLayout(formLayout);
+    layout->addWidget(buttonBox);
+
+    connect(buttonBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    connect(buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+
+    if (dialog.exec() == QDialog::Accepted && !nameEdit->text().trimmed().isEmpty()) {
+        // Создаем новую делегацию
+        QHash<QString, QVariant> delegationData;
+        delegationData["competition_id"] = m_document->competitionId();
+        delegationData["name"] = nameEdit->text().trimmed();
+        delegationData["representative"] = representativeEdit->text().trimmed();
+        delegationData["contact"] = contactEdit->text().trimmed();
+
+        qint64 newId = m_document->insertRecord("delegations", delegationData);
+
+        if (newId > 0) {
+            // ВАЖНО: Испускаем сигнал, что делегация создана
+            emit delegationCreated(newId, nameEdit->text().trimmed());
+
+            // Обновляем комбобокс в текущем диалоге
+            refreshDelegationsCombo();
+
+            // Выбираем созданную делегацию
+            for (int i = 0; i < m_delegationsModel->rowCount(); ++i) {
+                qint64 id = m_delegationsModel->data(
+                                                  m_delegationsModel->index(i, 0)).toLongLong();
+                if (id == newId) {
+                    m_comboDelegation->setCurrentIndex(i);
+                    break;
+                }
+            }
+
+            QMessageBox::information(this, tr("Успех"),
+                                     tr("Делегация успешно создана"));
+        } else {
+            QMessageBox::warning(this, tr("Ошибка"),
+                                 tr("Не удалось создать делегацию"));
+        }
+    }
+}
+
+void PersonEditDialog::refreshDelegationsCombo()
+{
+    if (!m_delegationsModel) return;
+
+    m_delegationsModel->select();
+    m_comboDelegation->setModel(m_delegationsModel);
+    m_comboDelegation->setModelColumn(m_delegationsModel->fieldIndex("name"));
 }
 
 void PersonEditDialog::setupComboBoxes()

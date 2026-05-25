@@ -20,14 +20,19 @@ DatabaseCommand::DatabaseCommand(CommandType type, const QString& tableName,
     switch (type) {
     case Insert:
         if (tableName == "participants") setText(QObject::tr("Добавлен(а) %1").arg(newData["full_name"].toString()));
+        else if (tableName == "delegations" ) setText(QObject::tr("Добавлен(а) %1").arg(newData["name"].toString()));
         else setText(QObject::tr("Insert into %1").arg(tableName));
         break;
     case Update:
         if (tableName == "participants") setText(QObject::tr("Обновлён(а) %1").arg(newData["full_name"].toString()));
+        else if (tableName == "delegations" ) setText(QObject::tr("Обновлён(а) %1").arg(newData["name"].toString()));
+        else if (tableName == "distances" ) setText(QObject::tr("Обновлён(а) %1").arg(newData["name"].toString()));
+        else if (tableName == "age_groups" ) setText(QObject::tr("Обновлён(а) %1").arg(newData["name"].toString()));
         else setText(QObject::tr("Update %1").arg(tableName));
         break;
     case Delete:
         if (tableName == "participants") setText(QObject::tr("Удален(а) %1").arg(oldData["full_name"].toString()));
+        else if (tableName == "delegations" ) setText(QObject::tr("Удален(а) %1").arg(newData["name"].toString()));
         else setText(QObject::tr("Delete from %1").arg(tableName));
         break;
     }

@@ -240,15 +240,17 @@ void MainWindow::keyPressEvent(QKeyEvent *e)
             }
         }
     }
-    if ((e->key() == Qt::Key_Insert)){//&&(e->modifiers() & Qt::ControlModifier)){
-        ui_log_msg("insert");
 
-        // if (focusedWidget != nullptr){
-        //     ui_log_msg(focusedWidget->objectName());
-        //     if (focusedWidget->objectName() == "tablePerson"){
-        //         ui_person->show();
-        //     }
-        // }
+    // Добавить обработку Insert
+    if (e->key() == Qt::Key_Insert) {
+        // Проверяем, что фокус на таблице участников
+        // if (focusedWidget == ui->tablePerson ||
+        //     (focusedWidget && focusedWidget->parent() == ui->tablePerson))
+        {
+            onAddRecord();
+            e->accept();
+            return;
+        }
     }
 
     // Undo/Redo через клавиатуру
@@ -771,7 +773,8 @@ void MainWindow::setupHiddenColumns(SqlTableModel* model, const QString& tableNa
         // НЕ скрываем competition_id - он нужен для фильтрации!
         // НЕ скрываем created_at и updated_at - они могут понадобиться
 
-        hiddenColumns << 14 // delegation_id (дублирует delegation_name)
+        hiddenColumns << 1 << 2
+                      << 14 // delegation_id (дублирует delegation_name)
                       << 15 // distance_id (дублирует distance_name)
                       << 16 // age_group_id (дублирует age_group_name)
                       << 17 // created_at (скрываем если не нужен)
@@ -807,6 +810,15 @@ void MainWindow::setupColumnVisibility()
 {
     qDebug() << "=== setupColumnVisibility() ===";
 
+    // Сначала скрываем столбцы в tableView (это самый надежный способ)
+    if (ui->tablePerson->model()) {
+        ui->tablePerson->setColumnHidden(1, true);
+        ui->tablePerson->setColumnHidden(2, true);
+        ui->tablePerson->setColumnHidden(4, true);
+        ui->tablePerson->setColumnHidden(10, true);
+        qDebug() << "Столбцы 1,2,4,10 скрыты в setupColumnVisibility";
+    }
+
     for (auto it = m_proxyModels.begin(); it != m_proxyModels.end(); ++it) {
         const QString& tableName = it.key();
         AbstractProxyModel* proxyModel = it.value();
@@ -819,16 +831,24 @@ void MainWindow::setupColumnVisibility()
         QList<int> visibleColumns;
 
         if (tableName == "participants") {
-            visibleColumns = {
-                3,  // full_name
-                5,  // bib_number
-                6,  // chip_number
-                9,  // gender
-                8,  // birth_date
-                11, // delegation_name
-                12, // distance_name
-                13  // age_group_name
-            };
+            // НЕ вызываем setVisibleColumns для participants!
+            // Просто пропускаем эту таблицу
+            qDebug() << "  Пропускаю participants - колонки скрыты через QTableView";
+            continue;  // <-- ВАЖНО: пропускаем установку видимости через прокси
+
+            // visibleColumns = {
+            //     3,  // full_name
+            //     5,  // bib_number
+            //     6,  // chip_number
+            //     9,  // gender
+            //     8,  // birth_date
+            //     11, // delegation_name
+            //     12, // distance_name
+            //     13  // age_group_name
+            // };
+
+            // ui->tablePerson->setColumnHidden(1, true);
+            // ui->tablePerson->setColumnHidden(2, true);
         }
         else if (tableName == "delegations") {
             visibleColumns = {2, 3, 4}; // name, representative, contact
@@ -907,6 +927,8 @@ void MainWindow::setupTableViewHeaders()
         for (int i = 11; i <= 18; ++i) { // Скрываем технические столбцы
             tableView->setColumnHidden(i, true);
         }
+        tableView->setColumnHidden(1, true);
+        tableView->setColumnHidden(2, true);
 
         // Автоматически подгоняем ширину столбцов
         tableView->resizeColumnsToContents();
@@ -1314,7 +1336,14 @@ void MainWindow::connectModelsToWidgets()
     // Сначала связываем обычные модели
     if (m_proxyModels.contains("participants")) {
         ui->tablePerson->setModel(m_proxyModels["participants"]);
+        // qDebug() << "Модель participants установлена, колонок:"
+        //          << ui->tablePerson->model()->columnCount();
+
+        ui->tablePerson->setColumnHidden(1, true);
+        ui->tablePerson->setColumnHidden(2, true);
+        // qDebug() << "Столбцы 1 и 2 скрыты в connectModelsToWidgets";
     }
+
     if (m_proxyModels.contains("age_groups")) {
         ui->tableGroup->setModel(m_proxyModels["age_groups"]);
     }
@@ -1959,7 +1988,7 @@ void MainWindow::on_act_redo_triggered()
 
 void MainWindow::onAddRecord()
 {
-    if (!m_document->isOpen()) {
+    if (!m_document || !m_document->isOpen()) {
         return;
     }
 
@@ -2011,6 +2040,108 @@ void MainWindow::showEditDialog(const QString& tableName, qint64 recordId)
     }
 }
 
+void MainWindow::highlightParticipant(qint64 participantId)
+{
+    if (!m_proxyModels.contains("participants")) return;
+
+    AbstractProxyModel* proxy = m_proxyModels["participants"];
+    SqlTableModel* sourceModel = m_tableModels["participants"];
+
+    for (int row = 0; row < sourceModel->rowCount(); ++row) {
+        QModelIndex index = sourceModel->index(row, 0);
+        if (sourceModel->data(index).toLongLong() == participantId) {
+            QModelIndex sourceIdx = sourceModel->index(row, 0);
+            QModelIndex proxyIdx = proxy->mapFromSource(sourceIdx);
+
+            ui->tablePerson->selectionModel()->select(
+                proxyIdx,
+                QItemSelectionModel::Select | QItemSelectionModel::Rows
+                );
+            ui->tablePerson->scrollTo(proxyIdx);
+            ui->tabWidget->setCurrentIndex(0);
+            break;
+        }
+    }
+}
+
+void MainWindow::highlightAgeGroup(qint64 ageGroupId)
+{
+    if (!m_proxyModels.contains("age_groups")) return;
+
+    AbstractProxyModel* proxy = m_proxyModels["age_groups"];
+    SqlTableModel* sourceModel = m_tableModels["age_groups"];
+
+    if (!sourceModel || !proxy) return;
+
+    for (int row = 0; row < sourceModel->rowCount(); ++row) {
+        QModelIndex index = sourceModel->index(row, 0);
+        if (sourceModel->data(index).toLongLong() == ageGroupId) {
+            QModelIndex sourceIdx = sourceModel->index(row, 0);
+            QModelIndex proxyIdx = proxy->mapFromSource(sourceIdx);
+
+            ui->tableGroup->selectionModel()->select(
+                proxyIdx,
+                QItemSelectionModel::Select | QItemSelectionModel::Rows
+                );
+            ui->tableGroup->scrollTo(proxyIdx);
+            ui->tabWidget->setCurrentIndex(2);
+            break;
+        }
+    }
+}
+
+void MainWindow::highlightDistance(qint64 distanceId)
+{
+    if (!m_proxyModels.contains("distances")) return;
+
+    AbstractProxyModel* proxy = m_proxyModels["distances"];
+    SqlTableModel* sourceModel = m_tableModels["distances"];
+
+    if (!sourceModel || !proxy) return;
+
+    for (int row = 0; row < sourceModel->rowCount(); ++row) {
+        QModelIndex index = sourceModel->index(row, 0);
+        if (sourceModel->data(index).toLongLong() == distanceId) {
+            QModelIndex sourceIdx = sourceModel->index(row, 0);
+            QModelIndex proxyIdx = proxy->mapFromSource(sourceIdx);
+
+            ui->tableDist->selectionModel()->select(
+                proxyIdx,
+                QItemSelectionModel::Select | QItemSelectionModel::Rows
+                );
+            ui->tableDist->scrollTo(proxyIdx);
+            ui->tabWidget->setCurrentIndex(3);
+            break;
+        }
+    }
+}
+
+void MainWindow::highlightDelegation(qint64 delegationId)
+{
+    if (!m_proxyModels.contains("delegations")) return;
+
+    AbstractProxyModel* proxy = m_proxyModels["delegations"];
+    SqlTableModel* sourceModel = m_tableModels["delegations"];
+
+    if (!sourceModel || !proxy) return;
+
+    for (int row = 0; row < sourceModel->rowCount(); ++row) {
+        QModelIndex index = sourceModel->index(row, 0);
+        if (sourceModel->data(index).toLongLong() == delegationId) {
+            QModelIndex sourceIdx = sourceModel->index(row, 0);
+            QModelIndex proxyIdx = proxy->mapFromSource(sourceIdx);
+
+            ui->tableOrg->selectionModel()->select(
+                proxyIdx,
+                QItemSelectionModel::Select | QItemSelectionModel::Rows
+                );
+            ui->tableOrg->scrollTo(proxyIdx);
+            ui->tabWidget->setCurrentIndex(4);
+            break;
+        }
+    }
+}
+
 QDialog* MainWindow::createEditDialog(const QString& tableName, qint64 recordId)
 {
     if (!m_document) {
@@ -2019,17 +2150,291 @@ QDialog* MainWindow::createEditDialog(const QString& tableName, qint64 recordId)
     }
 
     if (tableName == "participants") {
-        return new PersonEditDialog(m_document, recordId, this);
+        return createEditDialogPerson(tableName,recordId);
     } else if (tableName == "delegations") {
-        // return new DelegationEditDialog(m_document, recordId, this);
+        return createEditDialogDelegation(tableName,recordId);
     } else if (tableName == "distances") {
-        // return new DistanceEditDialog(m_document, recordId, this);
+        return createEditDialogDist(tableName,recordId);
     } else if (tableName == "age_groups") {
-        // return new AgeGroupEditDialog(m_document, recordId, this);
+        return createEditDialogAge(tableName,recordId);
     }
 
     qWarning() << "No dialog for table:" << tableName;
     return nullptr;
+}
+
+QDialog* MainWindow::createEditDialogPerson(const QString& tableName, qint64 recordId){
+    PersonEditDialog* dialog = new PersonEditDialog(m_document, recordId, this);
+
+    // Подключаем сигнал о сохранении записи (для новых записей)
+    connect(dialog, &PersonEditDialog::recordSaved,
+            this, [this](qint64 id, const QString& table) {
+                qDebug() << "Запись сохранена:" << table << "ID:" << id;
+
+                // ВАЖНО: Обновляем модель ДО обновления таблицы
+                if (m_tableModels.contains(table)) {
+                    // Принудительно перезагружаем данные из БД
+                    m_tableModels[table]->select();
+
+                    // Обновляем прокси-модель
+                    if (m_proxyModels.contains(table)) {
+                        m_proxyModels[table]->invalidate();
+                    }
+                }
+
+                // Обновляем отображение
+                refreshTable(table);
+                updateStatusBar();
+
+                // Подсвечиваем новую/измененную запись
+                if (table == "participants") {
+                    QTimer::singleShot(100, this, [this, id]() {
+                        highlightParticipant(id);
+                    });
+                }
+            });
+
+    // НОВЫЙ СИГНАЛ: при обновлении существующего участника
+    connect(dialog, &PersonEditDialog::recordUpdated,
+            this, [this](qint64 id, const QString& table) {
+                qDebug() << "Участник обновлен:" << table << "ID:" << id;
+
+                // Обновляем таблицу участников
+                refreshTable(table);
+
+                // ВАЖНО: Обновляем таблицу результатов
+                // (могли измениться ФИО, возрастная группа, делегация, дистанция)
+                refreshTable("results");
+
+                // Пересчитываем ранги в результатах
+                if (m_proxyModels.contains("results")) {
+                    if (ResultsProxyModel* resultsProxy =
+                        qobject_cast<ResultsProxyModel*>(m_proxyModels["results"])) {
+                        resultsProxy->recalculateRanks();
+                    }
+                }
+
+                updateStatusBar();
+            });
+
+    // Подключаем сигнал создания делегации
+    connect(dialog, &PersonEditDialog::delegationCreated,
+            this, [this](qint64 id, const QString& name) {
+                qDebug() << "Создана новая делегация:" << name << "ID:" << id;
+
+                // Обновляем таблицу делегаций (вкладка 4)
+                if (m_tableModels.contains("delegations")) {
+                    m_tableModels["delegations"]->select();
+                    if (m_proxyModels.contains("delegations")) {
+                        m_proxyModels["delegations"]->invalidate();
+                    }
+                }
+
+                if (ui->tabWidget->currentIndex() == 4) {
+                    ui->tableOrg->viewport()->update();
+                }
+
+                updateStatusBar();
+            });
+
+    // Подключаем сигнал об удалении
+    connect(dialog, &PersonEditDialog::recordDeleted,
+            this, [this](qint64 id, const QString& table) {
+                qDebug() << "Запись удалена:" << table << "ID:" << id;
+                refreshTable(table);
+                refreshTable("results");  // При удалении участника нужно обновить результаты
+                updateStatusBar();
+            });
+
+    return dialog;
+}
+
+QDialog* MainWindow::createEditDialogDelegation(const QString& tableName, qint64 recordId){
+    DelegationEditDialog* dialog = new DelegationEditDialog(m_document, recordId, this);
+
+    // Подключаем сигнал сохранения
+    connect(dialog, &DelegationEditDialog::recordSaved,
+            this, [this](qint64 id, const QString& table) {
+                qDebug() << "Делегация сохранена:" << table << "ID:" << id;
+
+                // Обновляем модель
+                if (m_tableModels.contains(table)) {
+                    m_tableModels[table]->select();
+
+                    if (m_proxyModels.contains(table)) {
+                        m_proxyModels[table]->invalidate();
+                    }
+                }
+
+                // Обновляем отображение
+                refreshTable(table);
+                updateStatusBar();
+
+                // Подсвечиваем добавленную делегацию
+                if (table == "delegations") {
+                    QTimer::singleShot(100, this, [this, id]() {
+                        highlightDelegation(id);
+                    });
+                }
+            });
+
+    // СИГНАЛ: при обновлении существующей делегации
+    connect(dialog, &DelegationEditDialog::recordUpdated,
+            this, [this](qint64 id, const QString& table) {
+                qDebug() << "Делегация обновлена:" << table << "ID:" << id;
+
+                // Обновляем саму таблицу делегаций
+                refreshTable(table);
+
+                // ОБНОВЛЯЕМ СВЯЗАННЫЕ ТАБЛИЦЫ
+                refreshTable("participants");  // У участников изменилось название делегации
+                refreshTable("results");       // В результатах тоже отображается делегация
+
+                updateStatusBar();
+            });
+
+    connect(dialog, &DelegationEditDialog::recordDeleted,
+            this, [this](qint64 id, const QString& table) {
+                refreshTable(table);
+                updateStatusBar();
+            });
+
+    // Подключаем сигнал создания делегации
+    connect(dialog, &DelegationEditDialog::delegationCreated,
+            this, [this](qint64 id, const QString& name) {
+                qDebug() << "Создана новая делегация:" << name << "ID:" << id;
+
+                if (m_tableModels.contains("delegations")) {
+                    m_tableModels["delegations"]->select();
+                    if (m_proxyModels.contains("delegations")) {
+                        m_proxyModels["delegations"]->invalidate();
+                    }
+                }
+
+                if (ui->tabWidget->currentIndex() == 4) {
+                    ui->tableOrg->viewport()->update();
+                }
+            });
+
+    return dialog;
+}
+
+
+QDialog* MainWindow::createEditDialogAge(const QString& tableName, qint64 recordId){
+    AgeGroupEditDialog* dialog = new AgeGroupEditDialog(m_document, recordId, this);
+
+    // Подключаем сигнал сохранения
+    connect(dialog, &AgeGroupEditDialog::recordSaved,
+            this, [this](qint64 id, const QString& table) {
+                qDebug() << "Возрастная группа сохранена:" << table << "ID:" << id;
+
+                // Обновляем модель
+                if (m_tableModels.contains(table)) {
+                    m_tableModels[table]->select();
+
+                    if (m_proxyModels.contains(table)) {
+                        m_proxyModels[table]->invalidate();
+                    }
+                }
+
+                // Обновляем отображение
+                refreshTable(table);
+                updateStatusBar();
+
+                // Подсвечиваем добавленную группу
+                if (table == "age_groups") {
+                    QTimer::singleShot(100, this, [this, id]() {
+                        highlightAgeGroup(id);
+                    });
+                }
+            });
+
+    // СИГНАЛ: при обновлении существующей возрастной группы
+    connect(dialog, &AgeGroupEditDialog::recordUpdated,
+            this, [this](qint64 id, const QString& table) {
+                qDebug() << "Возрастная группа обновлена:" << table << "ID:" << id;
+
+                // Обновляем саму таблицу групп
+                refreshTable(table);
+
+                // ОБНОВЛЯЕМ СВЯЗАННЫЕ ТАБЛИЦЫ
+                refreshTable("participants");  // У участников изменилась возрастная группа
+                refreshTable("results");       // В результатах тоже отображается группа
+
+                updateStatusBar();
+            });
+
+    return dialog;
+}
+
+QDialog* MainWindow::createEditDialogDist(const QString& tableName, qint64 recordId){
+    DistanceEditDialog* dialog = new DistanceEditDialog(m_document, recordId, this);
+
+    // Подключаем сигнал сохранения
+    connect(dialog, &DistanceEditDialog::recordSaved,
+            this, [this](qint64 id, const QString& table) {
+                qDebug() << "Дистанция сохранена:" << table << "ID:" << id;
+
+                // Обновляем модель
+                if (m_tableModels.contains(table)) {
+                    m_tableModels[table]->select();
+
+                    if (m_proxyModels.contains(table)) {
+                        m_proxyModels[table]->invalidate();
+                    }
+                }
+
+                // Обновляем отображение
+                refreshTable(table);
+                updateStatusBar();
+
+                // Подсвечиваем добавленную дистанцию
+                if (table == "distances") {
+                    QTimer::singleShot(100, this, [this, id]() {
+                        highlightDistance(id);
+                    });
+                }
+            });
+
+    // СИГНАЛ: при обновлении существующей дистанции
+    connect(dialog, &DistanceEditDialog::recordUpdated,
+            this, [this](qint64 id, const QString& table) {
+                qDebug() << "Дистанция обновлена:" << table << "ID:" << id;
+
+                // Обновляем саму таблицу дистанций
+                refreshTable(table);
+
+                // ОБНОВЛЯЕМ СВЯЗАННЫЕ ТАБЛИЦЫ
+                refreshTable("participants");  // У участников изменилась дистанция
+                refreshTable("results");       // В результатах тоже отображается дистанция
+
+                updateStatusBar();
+            });
+
+    connect(dialog, &DistanceEditDialog::recordDeleted,
+            this, [this](qint64 id, const QString& table) {
+                refreshTable(table);
+                updateStatusBar();
+            });
+
+    // Подключаем сигнал создания дистанции
+    connect(dialog, &DistanceEditDialog::distanceCreated,
+            this, [this](qint64 id, const QString& name) {
+                qDebug() << "Создана новая дистанция:" << name << "ID:" << id;
+
+                if (m_tableModels.contains("distances")) {
+                    m_tableModels["distances"]->select();
+                    if (m_proxyModels.contains("distances")) {
+                        m_proxyModels["distances"]->invalidate();
+                    }
+                }
+
+                if (ui->tabWidget->currentIndex() == 3) {
+                    ui->tableDist->viewport()->update();
+                }
+            });
+
+    return dialog;
 }
 
 void MainWindow::onEditRecord()
@@ -2163,7 +2568,7 @@ void MainWindow::onTabChanged(int index)
         return;
     }
 
-    m_currentTable = m_tabTableMap.value(index, "participants");
+    m_currentTable = m_tabTableMap.value(index, "none");//"participants");
     updateStatusBar();
 }
 
@@ -2216,3 +2621,17 @@ void MainWindow::updateWindowTitle()
 
     setWindowTitle(title);
 }
+
+void MainWindow::on_act_Sync_triggered()
+{
+    QString str = QDateTime::currentDateTime().toString("!Tyyyy-MM-dd HH:mm:ss*"); // !T2025-06-12 10:46:00*
+    m_siStation->setStationTimeTxt();
+    ui_log_msg( str );
+}
+
+
+void MainWindow::on_act_insert_triggered()
+{
+    onAddRecord();
+}
+

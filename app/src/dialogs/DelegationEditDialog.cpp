@@ -17,6 +17,10 @@ DelegationEditDialog::DelegationEditDialog(Document* document, qint64 recordId, 
     : EditDialogBase(document, "delegations", recordId, parent)
 {
     setupUi();
+
+    if (!isNewRecord()) {
+        loadData();  // редактирование существующей записи
+    }
 }
 
 DelegationEditDialog::~DelegationEditDialog()

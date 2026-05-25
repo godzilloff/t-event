@@ -200,8 +200,16 @@ private:
     QString getTableNameForTab(int tabIndex) const;
 
     // Диалоги
+    void highlightParticipant(qint64 participantId);
+    void highlightAgeGroup(qint64 ageGroupId);
+    void highlightDistance(qint64 distanceId);
+    void highlightDelegation(qint64 delegationId);
     void showEditDialog(const QString& tableName, qint64 recordId = -1);
     QDialog* createEditDialog(const QString& tableName, qint64 recordId = -1);
+    QDialog* createEditDialogPerson(const QString& tableName, qint64 recordId = -1);
+    QDialog* createEditDialogDelegation(const QString& tableName, qint64 recordId = -1);
+    QDialog* createEditDialogAge(const QString& tableName, qint64 recordId = -1);
+    QDialog* createEditDialogDist(const QString& tableName, qint64 recordId = -1);
 
     // Открытие документов
     void OpenTEvent(QString fpath);

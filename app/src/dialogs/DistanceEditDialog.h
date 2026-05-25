@@ -22,6 +22,9 @@ public:
     explicit DistanceEditDialog(Document* document, qint64 recordId, QWidget* parent);
     ~DistanceEditDialog();
 
+signals:
+    void distanceCreated(qint64 id, const QString& name);  // Сигнал для создания
+
 protected:
     void setupUi() override;
     void loadData() override;

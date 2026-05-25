@@ -29,6 +29,8 @@ signals:
     void recordDeleted(qint64 recordId, const QString& tableName);
     void dialogClosed();
 
+    void recordUpdated(qint64 recordId, const QString& tableName);
+
 public slots:
     virtual void accept() override;
     virtual void reject() override;

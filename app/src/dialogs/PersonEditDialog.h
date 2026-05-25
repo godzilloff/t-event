@@ -37,6 +37,9 @@ public:
     bool save() { return saveRecord(); }
     bool validate() { return validateForm(); }
 
+signals:
+    void delegationCreated(qint64 id, const QString& name);
+
 protected:
     void setupUi() override;
     void loadData() override;
@@ -48,10 +51,13 @@ private slots:
     void updateUiForType();
     void onApplyClicked();
 
+    void onNewDelegationClicked();
+
 private:
     void setupComboBoxes();
     void createMainTab(QWidget* tab);
     QFormLayout* createFormLayout(QWidget* parent);
+    void refreshDelegationsCombo();
 
     // Layouts
     QVBoxLayout* m_mainLayout = nullptr;
@@ -70,6 +76,7 @@ private:
     QDateEdit* m_editBirthDate = nullptr;
     QTimeEdit* m_editStartTime = nullptr;
     QSpinBox* m_spinTeamSize = nullptr;
+    QPushButton* m_btnNewDelegation = nullptr;
 
     // Labels
     QLabel* m_labelType;

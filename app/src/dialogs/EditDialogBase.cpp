@@ -121,15 +121,22 @@ bool EditDialogBase::performSave()
     }
 
     bool success = false;
+    bool wasNewRecord = isNewRecord();
 
     if (isNewRecord()) {
         qint64 newId = m_document->insertRecord(m_tableName, formData);
         success = (newId > 0);
         if (success) {
             m_recordId = newId;
+            emit recordSaved(m_recordId, m_tableName);
         }
     } else {
         success = m_document->updateRecord(m_tableName, m_recordId, formData);
+        if (success) {
+            // ВАЖНО: Испускаем сигнал об обновлении записи
+            emit recordUpdated(m_recordId, m_tableName);
+            emit recordSaved(m_recordId, m_tableName);
+        }
     }
 
     return success;

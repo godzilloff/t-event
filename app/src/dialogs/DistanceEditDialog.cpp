@@ -16,6 +16,10 @@ DistanceEditDialog::DistanceEditDialog(Document* document, qint64 recordId, QWid
     : EditDialogBase(document, "distances", recordId, parent)
 {
     setupUi();
+
+    if (!isNewRecord()) {
+        loadData();
+    }
 }
 
 DistanceEditDialog::~DistanceEditDialog()

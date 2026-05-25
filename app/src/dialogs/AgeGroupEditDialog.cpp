@@ -15,6 +15,10 @@ AgeGroupEditDialog::AgeGroupEditDialog(Document* document, qint64 recordId, QWid
     : EditDialogBase(document, "age_groups", recordId, parent)
 {
     setupUi();
+
+    if (!isNewRecord()) {
+        loadData();
+    }
 }
 
 AgeGroupEditDialog::~AgeGroupEditDialog()
