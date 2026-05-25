@@ -12,6 +12,13 @@ class ResultsProxyModel : public AbstractProxyModel
     Q_OBJECT
 
 public:
+    enum class TimePrecision {
+        Seconds = 0,      // Без долей: "HH:MM:SS"
+        Tenths = 1,       // Десятые: "HH:MM:SS.t"
+        Hundredths = 2,   // Сотые: "HH:MM:SS.tt"
+        Milliseconds = 3  // Миллисекунды: "HH:MM:SS.ttt"
+    };
+
     explicit ResultsProxyModel(QObject* parent = nullptr);
     ~ResultsProxyModel();
 
@@ -50,6 +57,9 @@ public:
     }
 
     int convertTimeToSeconds(const QString& timeStr) const;
+
+    void setTimePrecision(TimePrecision precision);
+    TimePrecision timePrecision() const { return m_timePrecision; }
 
 signals:
     void calculationStarted();
@@ -102,6 +112,10 @@ private:
     QSet<int> m_visibleColumns;
     int m_currentSortColumn;
     Qt::SortOrder m_currentSortOrder;
+
+    QString extractTimeFromDateTime(const QString& dateTimeStr) const;
+    QString formatTimeWithPrecision(const QTime& time) const;
+    TimePrecision m_timePrecision = TimePrecision::Seconds;
 };
 
 #endif // RESULTSPROXYMODEL_H

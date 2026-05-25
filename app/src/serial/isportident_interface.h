@@ -25,6 +25,7 @@ public:
     virtual void acknowledgeCard() = 0;
 
     // Управление станцией
+    virtual void setStationTimeTxt() = 0;
     virtual void beep(int count = 1) = 0;
     virtual void powerOff() = 0;
     virtual QDateTime getStationTime() = 0;

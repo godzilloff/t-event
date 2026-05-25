@@ -297,20 +297,23 @@ void CardReadManager::determineBlocksToRead() {
         case CardType::SI11:
         case CardType::SIAC:
             {
-                // SI10: блок 0 и необходимое количество блоков с отметками
-                // Каждый блок содержит 32 отметки (128 байт / 4 байта на отметку)
-                int maxPunchesPerBlock = 32;
-                int blocksNeededForPunches = 1 + (maxPunchesPerBlock - m_session.decodedData.punchCount ) / maxPunchesPerBlock;
-                //int blocksNeededForPunches = 1 + (m_session.decodedData.punchCount + maxPunchesPerBlock - 1) / maxPunchesPerBlock;
+                // Параметры для SI10
+                const int BLOCK_SIZE_BYTES = 128;      // размер блока в байтах
+                const int PUNCH_RECORD_SIZE = 4;       // размер одной отметки в байтах (для SI10)
+                const int PUNCHES_PER_BLOCK = BLOCK_SIZE_BYTES / PUNCH_RECORD_SIZE; // = 32
+                const int TOTAL_BLOCKS_SI10 = 8;       // блоки 0-7
+                const int PERSONAL_INFO_BLOCKS = 0;    // блоки 1, 2, 3 (личная информация)
 
-                // SI10 имеет блоки 0-7, но блоки 1-3 содержат личную информацию
-                // Если нужно читать личную информацию, включаем блоки 1-3
-                int personalInfoBlocks = 0;// 3; // Блоки 1, 2, 3
-                m_session.blocksToRead = 1 + personalInfoBlocks + blocksNeededForPunches;
+                // Вычисление необходимого количества блоков с отметками
+                // Блок 0 всегда читается (содержит заголовок и первые отметки)
+                int blocksNeededForPunches = (m_session.decodedData.punchCount + PUNCHES_PER_BLOCK - 1) / PUNCHES_PER_BLOCK;
 
-                // Не превышаем максимальное количество блоков
-                if (m_session.blocksToRead > Constants::CardOffsets::SI10.blocks) {
-                    m_session.blocksToRead = Constants::CardOffsets::SI10.blocks;
+                // Общее количество блоков для чтения
+                m_session.blocksToRead = 1 + PERSONAL_INFO_BLOCKS + blocksNeededForPunches;
+
+                // Ограничение максимальным количеством блоков
+                if (m_session.blocksToRead > TOTAL_BLOCKS_SI10) {
+                    m_session.blocksToRead = TOTAL_BLOCKS_SI10;
                 }
             }
             break;

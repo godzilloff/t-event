@@ -165,6 +165,19 @@ QVariant ResultsProxyModel::data(const QModelIndex& index, int role) const
 
     // Для обычных колонок используем базовую реализацию
     if (index.column() < m_sourceColumnCount) {
+        // Обработка временных колонок
+        if (role == Qt::DisplayRole) {
+            int col = index.column();
+            // ResultTime (4), StartTime (8), FinishTime (9)
+            if (col == 4 || col == 8 || col == 9) {
+                QVariant originalData = QSortFilterProxyModel::data(index, role);
+                QString timeStr = extractTimeFromDateTime(originalData.toString());
+                if (!timeStr.isEmpty()) {
+                    return timeStr;
+                }
+                return originalData;
+            }
+        }
         return QSortFilterProxyModel::data(index, role);
     }
 
@@ -1574,4 +1587,114 @@ int ResultsProxyModel::convertTimeToSeconds(const QString& timeStr) const
     }
 
     return 0;
+}
+
+void ResultsProxyModel::setTimePrecision(TimePrecision precision)
+{
+    if (m_timePrecision != precision) {
+        m_timePrecision = precision;
+
+        // Обновляем отображение колонок с временем
+        if (sourceModel() && rowCount() > 0) {
+            // Обновляем колонки: ResultTime (4), StartTime (8), FinishTime (9)
+            QList<int> timeColumns = {4, 8, 9};
+            for (int col : timeColumns) {
+                if (col < m_sourceColumnCount) {
+                    QModelIndex topLeft = index(0, col);
+                    QModelIndex bottomRight = index(rowCount() - 1, col);
+                    emit dataChanged(topLeft, bottomRight, {Qt::DisplayRole});
+                }
+            }
+        }
+    }
+}
+
+QString ResultsProxyModel::extractTimeFromDateTime(const QString& dateTimeStr) const
+{
+    if (dateTimeStr.isEmpty()) {
+        return QString();
+    }
+
+    // Пробуем разные форматы
+    QDateTime dt;
+
+    // Формат с миллисекундами: "dd.MM.yyyy HH:mm:ss.zzz"
+    dt = QDateTime::fromString(dateTimeStr, "dd.MM.yyyy HH:mm:ss.zzz");
+    if (dt.isValid()) {
+        return formatTimeWithPrecision(dt.time());
+    }
+
+    // Формат с миллисекундами: "yyyy-MM-dd HH:mm:ss.zzz"
+    dt = QDateTime::fromString(dateTimeStr, "yyyy-MM-dd HH:mm:ss.zzz");
+    if (dt.isValid()) {
+        return formatTimeWithPrecision(dt.time());
+    }
+
+    // Формат с секундами: "yyyy-MM-dd HH:mm:ss"
+    dt = QDateTime::fromString(dateTimeStr, "yyyy-MM-dd HH:mm:ss");
+    if (dt.isValid()) {
+        return formatTimeWithPrecision(dt.time());
+    }
+
+    // Формат с точкой вместо двоеточия в миллисекундах
+    dt = QDateTime::fromString(dateTimeStr, "yyyy-MM-dd HH:mm:ss.zzz");
+    if (dt.isValid()) {
+        return formatTimeWithPrecision(dt.time());
+    }
+
+    // Если не распарсилось, пробуем как время
+    QTime t = QTime::fromString(dateTimeStr, "hh:mm:ss.zzz");
+    if (t.isValid()) {
+        return formatTimeWithPrecision(t);
+    }
+
+    t = QTime::fromString(dateTimeStr, "hh:mm:ss");
+    if (t.isValid()) {
+        return formatTimeWithPrecision(t);
+    }
+
+    // Возвращаем как есть
+    return dateTimeStr;
+}
+
+QString ResultsProxyModel::formatTimeWithPrecision(const QTime& time) const
+{
+    if (!time.isValid()) {
+        return QString();
+    }
+
+    QString format;
+    switch (m_timePrecision) {
+    case TimePrecision::Seconds:
+        format = "hh:mm:ss";
+        break;
+    case TimePrecision::Tenths:
+        // Десятые доли секунды
+        {
+        int msecc = time.msec();
+            msecc /=100;
+        return QString("%1:%2:%3.%4")
+            .arg(time.hour(), 2, 10, QChar('0'))
+            .arg(time.minute(), 2, 10, QChar('0'))
+            .arg(time.second(), 2, 10, QChar('0'))
+            .arg(msecc);  // Десятые
+            // .arg(time.msec() / 100);  // Десятые
+        }
+    case TimePrecision::Hundredths:
+        // Сотые доли секунды
+        return QString("%1:%2:%3.%4")
+            .arg(time.hour(), 2, 10, QChar('0'))
+            .arg(time.minute(), 2, 10, QChar('0'))
+            .arg(time.second(), 2, 10, QChar('0'))
+            .arg(time.msec() / 10);   // Сотые
+    case TimePrecision::Milliseconds:
+        // Миллисекунды
+        return QString("%1:%2:%3.%4")
+            .arg(time.hour(), 2, 10, QChar('0'))
+            .arg(time.minute(), 2, 10, QChar('0'))
+            .arg(time.second(), 2, 10, QChar('0'))
+            .arg(time.msec(), 3, 10, QChar('0'));
+    }
+
+    return time.toString("hh:mm:ss");
 }
