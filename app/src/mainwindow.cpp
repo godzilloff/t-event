@@ -580,6 +580,8 @@ void MainWindow::setupModels()
         if (tableName == "results") {
             ResultsProxyModel* resultsProxy = new ResultsProxyModel(this);
             resultsProxy->setSourceModel(model);
+            resultsProxy->setTimePrecision(ResultsProxyModel::TimePrecision::Tenths); // Миллисекунды
+
             proxy = resultsProxy;
 
             //resultsProxy->setObjectName("ResultsProxy");

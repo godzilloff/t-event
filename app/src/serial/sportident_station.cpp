@@ -176,10 +176,11 @@ bool SportIdentStation::connectToStation(const QString& portName, int baudRate) 
 
         m_connected = true;
 
-        // Обновление конфигурации
-        emit debugMessage(tr("Updating station configuration..."));
-        updateStationConfig();
-        updateStationInfo();
+        // Установка мастер-режима T-Event
+        emit debugMessage(tr("Sending read-mode-cmd: !M005*"));
+        QString str = "!M005*";
+        QByteArray data = str.toUtf8() + "\r\n";
+        sendRawData(data);
 
         emit stationConnected(m_stationInfo);
         emit debugMessage(tr("Connected to station at %1").arg(portName));
@@ -524,6 +525,83 @@ void SportIdentStation::onStateChanged(CardReadState newState, CardReadState old
 void SportIdentStation::onProgressChanged(int blocksRead, int totalBlocks) {
     emit debugMessage(tr("Reading progress: %1/%2 blocks")
                           .arg(QString::number(blocksRead),QString::number(totalBlocks)));
+}
+
+// Подготовка данных с добавлением 1 секунды
+QByteArray SportIdentStation::prepareTimeData() {
+    // Получаем текущее время и добавляем 1 секунду
+    QDateTime targetTime = QDateTime::currentDateTime().addSecs(2);
+
+    // Форматируем в требуемый формат: !TYYYY-MM-DD HH:mm:ss*
+    QString timeString = targetTime.toString("!Tyyyy-MM-dd HH:mm:ss*");
+
+    return timeString.toUtf8();
+}
+
+// Вычисление миллисекунд до следующей полной секунды
+qint64 SportIdentStation::calculateWaitToNextSecond() {
+    QDateTime now = QDateTime::currentDateTime();
+    qint64 currentMs = now.toString("zzz").toInt(); // Получаем текущие миллисекунды
+
+    // Если текущие миллисекунды = 0, то мы уже на границе секунды
+    // Ожидаем 1000 мс до следующей секунды
+    qint64 waitMs = 2000 - currentMs - 130;
+
+    // Если waitMs = 1000, то это означает, что currentMs = 0,
+    // и мы должны подождать 1000 мс до следующей секунды
+    // Если waitMs = 0, то это означает, что currentMs = 1000 (невозможно),
+    // или мы точно на границе (корректируем)
+    if (waitMs == 1000) {
+        waitMs = 0; // Мы уже на границе секунды, ждем 0 мс
+    } else if (waitMs == 0) {
+        waitMs = 1000; // Аномалия, ждем полную секунду
+    }
+
+    return waitMs;
+}
+
+void SportIdentStation::waitAndExecute(std::function<void(const QByteArray&)> callback) {
+    // Вычисляем данные заранее (добавляем 1 секунду к текущему времени)
+    QByteArray data = prepareTimeData();
+
+    // Вычисляем время ожидания до следующей полной секунды
+    auto waitMs = calculateWaitToNextSecond();
+
+    // Прецизионное ожидание с использованием std::this_thread::sleep_for
+    // для более точной задержки
+    auto start = std::chrono::steady_clock::now();
+
+    // Основное ожидание (на 1 мс меньше, чтобы не проспать момент)
+    if (waitMs > 1) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(waitMs - 1));
+    }
+
+    // Точная доводка с активным ожиданием (busy loop)
+    auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
+                       std::chrono::steady_clock::now() - start
+                       ).count() / 1000.0;
+
+    while (elapsed < waitMs) {
+        // Активное ожидание для микросекундной точности
+        std::this_thread::yield();
+        elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
+                      std::chrono::steady_clock::now() - start
+                      ).count() / 1000.0;
+    }
+
+    // Вызываем callback с подготовленными данными
+    callback(data);
+}
+
+void SportIdentStation::setStationTimeTxt(){
+    QString str = QDateTime::currentDateTime().toString("!Tyyyy-MM-dd HH:mm:ss*"); // !T2025-06-12 10:46:00*
+    QByteArray data = str.toUtf8() + "\r";
+    // sendRawData(data);
+
+    SportIdentStation::waitAndExecute([this](const QByteArray& data) {
+        sendRawData(data);
+        qDebug() << "Executed at precise time:" << data;
+    });
 }
 
 void SportIdentStation::beep(int count) {

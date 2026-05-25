@@ -29,7 +29,13 @@ public:
     // Основные операции
     void acknowledgeCard() override;
 
+
+    QByteArray prepareTimeData();
+    qint64 calculateWaitToNextSecond();
+    void waitAndExecute(std::function<void(const QByteArray&)> callback);
+
     // Управление станцией
+    void setStationTimeTxt() override;
     void beep(int count = 1) override;
     void powerOff() override;
     QDateTime getStationTime() override;
