@@ -16,6 +16,7 @@ private slots:
 
     // Тестовые данные из спецификации
     void testKnownValues();
+    void testKnownValues2();
 
     // Тесты verify
     void testVerify();
@@ -76,6 +77,18 @@ void TestCRC::testKnownValues()
     // quint16 crc2 = SportIdent::CRC16::calculate(test2);
     // Замените на ожидаемое значение
     // QCOMPARE(crc2, quint16(0xXXXX));
+}
+
+void TestCRC::testKnownValues2()
+{
+    // Тестируем ваш пример
+    QByteArray data = QByteArray::fromHex("E806000F0F7A2588");
+    quint16 crc = SportIdent::CRC16::calculate(data);
+    QCOMPARE(crc, quint16(0x11E7));
+
+    // Проверяем байтовое представление
+    QByteArray crcBytes = SportIdent::CRC16::calculateBytes(data);
+    QCOMPARE(crcBytes.toHex().toUpper(), QByteArray("11E7"));
 }
 
 void TestCRC::testVerify()
