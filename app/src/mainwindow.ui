@@ -224,6 +224,8 @@
    <addaction name="separator"/>
    <addaction name="act_undo"/>
    <addaction name="act_redo"/>
+   <addaction name="separator"/>
+   <addaction name="act_connect_printer"/>
   </widget>
   <action name="act_new">
    <property name="icon">
@@ -474,6 +476,18 @@
    </property>
    <property name="menuRole">
     <enum>QAction::NoRole</enum>
+   </property>
+  </action>
+  <action name="act_connect_printer">
+   <property name="icon">
+    <iconset resource="../resource.qrc">
+     <normaloff>:/rec/img/printer.svg</normaloff>:/rec/img/printer.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Подключить принтер</string>
+   </property>
+   <property name="toolTip">
+    <string>Подключить принтер</string>
    </property>
   </action>
  </widget>

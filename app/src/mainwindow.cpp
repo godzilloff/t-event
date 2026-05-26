@@ -14,6 +14,8 @@
 #include "dialogs/DistanceEditDialog.h"
 #include "dialogs/AgeGroupEditDialog.h"
 
+#include "print/ImageGenerator.h"
+#include "print/PrinterFacade.h"
 #include "serial/isportident_interface.h"
 #include "serial/sportident_station.h"
 #include "serial/sportident_types.h"
@@ -64,6 +66,9 @@
 #include <QDebug>
 
 #include <QStandardPaths>
+
+#include "print/PrinterFacade.h"
+#include "print/PrintPreviewWidget.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
@@ -121,6 +126,13 @@ MainWindow::MainWindow(QWidget *parent)
     undoDock->setWidget(m_undoView);
     addDockWidget(Qt::RightDockWidgetArea, undoDock);
 
+    // Создаём окно предпросмотра
+    m_previewWindow = new PrintPreviewWidget();
+
+    // Подключаем сигналы к слотам MainWindow
+    connect(m_previewWindow, &PrintPreviewWidget::printRequested,
+            this, &MainWindow::onPrintImageRequested);
+
     qDebug() << "=== КОНСТРУКТОР ЗАВЕРШЕН ===\n";
 }
 
@@ -134,6 +146,10 @@ MainWindow::~MainWindow()
 
     delete fileMenu;
     delete recentFilesMenu;
+
+    if (m_previewWindow && !m_previewWindow->isVisible()) {
+        delete m_previewWindow;
+    }
 }
 
 void MainWindow::closeCurrentDocument()
@@ -216,6 +232,25 @@ void MainWindow::closeEvent(QCloseEvent *e)
     // программа закрывается
     saveSettings();
     QMainWindow::closeEvent(e);
+}
+
+void MainWindow::onPrintPreviewRequested() {
+    // Показываем предпросмотр
+    m_previewWindow->showPreview(m_processed_image);
+    m_previewWindow->show();
+}
+
+void MainWindow::onPrintImageRequested() {
+    qDebug() << "Получен запрос на печать изображения";
+
+    if (m_printer.isConnected()){
+        // Печатаем изображение
+        bool success = m_printer.printImage(m_processed_image);
+        if (!success) {
+            qDebug() << "Ошибка печати";
+            QMessageBox::warning(this, "Ошибка", "Не удалось распечатать документ!");
+        }
+    }
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *e)
@@ -491,6 +526,37 @@ void MainWindow::onResultProcessed(qint64 resultId, const SportIdent::CardData& 
     updateStatusBar();
     logMessage(tr("Результат для карты %1 успешно добавлен (ID: %2)")
                    .arg(cardData.cardNumber).arg(resultId));
+
+    if (m_flag_print) printResult(cardData);
+}
+
+void MainWindow::printResult(const SportIdent::CardData& cardData){
+    if(ui->act_connect_printer->isChecked() && m_printer.isConnected()){
+
+        //=================
+        // формирование текстового вывода
+
+        qint64 resultMs = cardData.startTime.msecsTo(cardData.finishTime);
+        QTime interval = QTime(0, 0, 0).addMSecs(resultMs);
+
+        QString split =
+            "Чип: " + QString::number(cardData.cardNumber)+"\n"+
+            "Старт: " + cardData.startTime.toString("HH:mm:ss.zzz").left(10)+"\n"+
+            "Финиш: " + cardData.finishTime.toString("HH:mm:ss.zzz").left(10)+"\n"+
+            "Результат: " + interval.toString("hh:mm:ss.zzz").left(10)+"\n";
+
+        //=================
+        // генерация изображения
+        ImageGenerator generator(m_currentSettings);
+        QImage image = generator.generateFromText(split);
+        m_processed_image = ImageProcessor::prepareForPrint(image, ColorMode::BlackTextOnWhiteBackground);
+
+        // Вызов предпросмотра
+        // onPrintPreviewRequested();
+
+        // Печать изображения
+        onPrintImageRequested();
+    }
 }
 
 void MainWindow::highlightResult(qint64 resultId)
@@ -1142,6 +1208,8 @@ void MainWindow::setupUi()
     }
 
     ui->tablePerson->setEditTriggers(QAbstractItemView::NoEditTriggers);
+
+    ui->act_connect_printer->setCheckable(true);
 
     // Устанавливаем текущую вкладку
     m_currentTable = m_tabTableMap.value(ui->tabWidget->currentIndex(), "participants");
@@ -2633,5 +2701,33 @@ void MainWindow::on_act_Sync_triggered()
 void MainWindow::on_act_insert_triggered()
 {
     onAddRecord();
+}
+
+
+void MainWindow::on_act_connect_printer_triggered(bool checked)
+{
+    m_flag_print = !m_flag_print;
+
+    if (m_flag_print){
+        // Подготавливаем изображение для предпросмотра
+        m_currentSettings.font.setPointSize(20);
+        m_currentSettings.width = 464;
+
+        // Подключаемся к принтеру, если ещё не подключены
+        if (!m_printer.isConnected()) {
+            if (!m_printer.connect("COM8", QSerialPort::Baud460800)) {
+                qDebug() << "Не удалось подключиться к принтеру";
+                QMessageBox::warning(this, "Ошибка", "Не удалось подключиться к принтеру!");
+                m_flag_print = false;
+                ui->act_connect_printer->setChecked(m_flag_print);
+                return;
+            }
+        }
+    }
+    else {
+        m_printer.disconnect();
+    }
+
+    ui->act_connect_printer->setChecked(m_flag_print);
 }
 

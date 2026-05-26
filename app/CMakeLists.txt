@@ -73,6 +73,16 @@ set(PROJECT_SOURCES
         src/serial/sportident_station.cpp
         src/serial/sportident_types.h
 
+        #src/print/print.cpp src/print/print.h
+        src/print/IPrinterCommand.h
+        src/print/ImageGenerator.h       src/print/ImageGenerator.cpp
+        src/print/ImageProcessor.h       src/print/ImageProcessor.cpp
+        src/print/EscPosPrinter.h        src/print/EscPosPrinter.cpp
+        src/print/SerialPortManager.h    src/print/SerialPortManager.cpp
+        src/print/PrinterFacade.h        src/print/PrinterFacade.cpp
+        src/print/PrintPreviewWidget.h   src/print/PrintPreviewWidget.cpp
+
+
         #src/qsportevent.h src/qsportevent.cpp
         #src/race.h src/race.cpp
         #src/course.h src/course.cpp

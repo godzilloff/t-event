@@ -19,6 +19,9 @@
 #include "AbstractProxyModel.h"
 #include "serial/isportident_interface.h"
 
+#include "print/PrintPreviewWidget.h"
+#include "print/PrinterFacade.h"
+
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;
@@ -72,6 +75,11 @@ private slots:
     void onDebugMessage(const QString& message);
     void onResultProcessed(qint64 resultId, const SportIdent::CardData& cardData);
     void highlightResult(qint64 resultId);
+
+    // Принтер
+    void onPrintPreviewRequested();
+    void onPrintImageRequested();
+    void printResult(const SportIdent::CardData& cardData);
 
     // Документ
     void onDocumentOpened();
@@ -132,12 +140,9 @@ private slots:
     // void on_onOpenCsvSecretarStFour_triggered();
     //void on_act_Sync_triggered();
 
-    // Обновление данных
-    // void onRecordInserted(const QString& tableName, qint64 id);
-    // void onRecordUpdated(const QString& tableName, qint64 id);
-    // void onRecordDeleted(const QString& tableName, qint64 id);
-    // void onCompetitionChanged(qint64 competitionId);
-
+    void on_act_Sync_triggered();
+    void on_act_insert_triggered();
+    void on_act_connect_printer_triggered(bool checked);
 
 private:
     // Инициализация
@@ -248,6 +253,13 @@ private:
     bool flag_need_save;
     Document* m_document;
     CsvImporter* m_csvImporter;
+
+    // Принтер
+    PrintPreviewWidget* m_previewWindow = nullptr;
+    QImage m_processed_image;
+    bool m_flag_print = false;
+    PrinterFacade m_printer;
+    PrintSettings m_currentSettings;
 
     // Модели данных
     QMap<QString, SqlTableModel*> m_tableModels;
