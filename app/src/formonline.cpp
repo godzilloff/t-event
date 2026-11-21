@@ -7,27 +7,33 @@ FormOnline::FormOnline(QWidget *parent)
     : QDialog(parent), ui(new Ui::FormOnline)
 {
     ui->setupUi(this);
-    //connect(ui->buttonBox, &QDialogButtonBox::accepted, this, &FormOnline::onAccepted);
+    connect(ui->buttonBox, &QDialogButtonBox::accepted, this, &FormOnline::onAccepted);
+    connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 }
 
-FormOnline::~FormOnline()
+FormOnline::~FormOnline() { delete ui; }
+
+void FormOnline::setConfig(const OrgeoConfig& c)
 {
-    delete ui;
+    ui->ed_url->setText(c.liveUrl);
+    ui->chbox_enable_online->setChecked(c.liveEnabled);
+    ui->chbox_results->setChecked(c.resultsEnabled);
+    ui->chbox_splits->setChecked(c.splitsEnabled);
+    ui->ed_cp_codes->setText(c.cpCodes);
 }
 
-// void FormOnline::update_sevent(std::shared_ptr<QSportEvent> &pSEvent)
-// {
-//     ptrSEvent = pSEvent;
-// }
-
-void FormOnline::recieveDataFromMain()
+OrgeoConfig FormOnline::config()
 {
-    //ui->ed_url->setText(ptrSEvent->getOnlineUrl());
-    //ui->chbox_enable_online->setChecked(ptrSEvent->getOnlineEnable());
+    OrgeoConfig c;
+    c.liveUrl = ui->ed_url->text().trimmed();
+    c.liveEnabled = ui->chbox_enable_online->isChecked();
+    c.resultsEnabled = ui->chbox_results->isChecked();
+    c.splitsEnabled = ui->chbox_splits->isChecked();
+    c.cpCodes = ui->ed_cp_codes->text().trimmed();
+    return c;
 }
 
 void FormOnline::onAccepted()
 {
-    //ptrSEvent->setOnlineEnable(ui->chbox_enable_online->isChecked());
-    //ptrSEvent->setOnlineUrl(ui->ed_url->text());
+    emit configSaved(config());
 }

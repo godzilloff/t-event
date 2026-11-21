@@ -9,6 +9,29 @@
 
 #include "serial/sportident_types.h"
 
+struct OrgeoConfig {
+    qint64 id = -1;
+    qint64 competitionId = -1;
+    QString liveUrl;
+    bool liveEnabled = false;
+    bool resultsEnabled = false;
+    bool splitsEnabled = false;
+    QString cpCodes;            // "91,92,93"
+    bool finishEnabled = true;
+
+    bool operator==(const OrgeoConfig& o) const {
+        return id             == o.id
+               && competitionId  == o.competitionId
+               && liveUrl        == o.liveUrl
+               && liveEnabled    == o.liveEnabled
+               && resultsEnabled == o.resultsEnabled
+               && splitsEnabled  == o.splitsEnabled
+               && cpCodes        == o.cpCodes
+               && finishEnabled  == o.finishEnabled;
+    }
+    bool operator!=(const OrgeoConfig& o) const { return !(*this == o); }
+};
+
 class Document : public QObject
 {
     Q_OBJECT
@@ -62,6 +85,10 @@ public:
     // Управление соревнованием
     bool setCurrentCompetition(qint64 id);
     bool createCompetition(const QString& name, const QDate& date);
+
+    // Orgeo online
+    OrgeoConfig getOrgeoConfig() const;
+    bool saveOrgeoConfig(OrgeoConfig& config);
 
 signals:
     void documentCreated(const QString& filePath);

@@ -53,9 +53,6 @@ bool DatabaseManager::openDatabase(const QString& databasePath)
 
     m_databasePath = databasePath;
 
-    // Проверяем, существует ли файл
-    bool fileExists = QFile::exists(databasePath);
-
     if (QSqlDatabase::contains(m_connectionName))
         m_db = QSqlDatabase::database(m_connectionName);
     else
@@ -74,34 +71,19 @@ bool DatabaseManager::openDatabase(const QString& databasePath)
 
     // Настройки SQLite для производительности
     QSqlQuery query(m_db);
-    if (!query.exec("PRAGMA foreign_keys = ON")) {
-        qWarning() << "Failed to enable foreign keys:" << query.lastError().text();
-    }
-
-    // // Оптимизации для работы с большими объемами данных
-    // query.exec("PRAGMA journal_mode = WAL");
-    // query.exec("PRAGMA synchronous = NORMAL");
-    // query.exec("PRAGMA cache_size = -20000"); // 20MB кэша
-    // query.exec("PRAGMA temp_store = MEMORY");
-    // query.exec("PRAGMA mmap_size = 268435456"); // 256MB mmap
-
-    // Оптимизации для работы с большими объемами данных
+    query.exec("PRAGMA foreign_keys = ON");
     query.exec("PRAGMA journal_mode = DELETE");
     query.exec("PRAGMA synchronous = FULL");
     query.exec("PRAGMA cache_size = -20000"); // 20MB кэша
     query.exec("PRAGMA mmap_size = 268435456"); // 256MB mmap
 
-    // Создаем таблицы если файла не было
-    if (!fileExists) {
-        createTables();
-        createViews();
-        createIndexes();
-        qDebug() << "Created new database at:" << databasePath;
-    } else {
-        // Проверяем и обновляем структуру если нужно
-        checkAndCreateTables();
-    }
+    // ВСЕГДА догоняем схему — IF NOT EXISTS делает это безопасным
+    createTables();
+    createViews();
+    createIndexes();
+    applyColumnMigrations();
 
+    qDebug() << "Database opened:" << databasePath;
     emit databaseOpened(databasePath);
     return true;
 }
@@ -123,35 +105,6 @@ void DatabaseManager::closeDatabase()
     emit databaseClosed();
 }
 
-bool DatabaseManager::checkAndCreateTables()
-{
-    QStringList requiredTables = {
-        "competitions", "delegations", "age_groups",
-        "distances", "participants", "team_members",
-        "results", "control_point_times"
-    };
-
-    bool allTablesExist = true;
-
-    for (const QString& table : requiredTables) {
-        if (!tableExists(table)) {
-            qWarning() << "Table" << table << "does not exist, recreating database...";
-            allTablesExist = false;
-            break;
-        }
-    }
-
-    if (!allTablesExist) {
-        // Создаем все таблицы заново
-        createTables();
-        createViews();
-        createIndexes();
-        return true;
-    }
-
-    return allTablesExist;
-}
-
 void DatabaseManager::createTables()
 {
     QSqlQuery query(m_db);
@@ -168,6 +121,24 @@ void DatabaseManager::createTables()
             organizations TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    )");
+
+    // Настройки Orgeo для каждого соревнования
+    query.exec(R"(
+        CREATE TABLE IF NOT EXISTS orgeo_configs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            competition_id INTEGER NOT NULL,
+            live_url TEXT,
+            live_enabled INTEGER DEFAULT 0,
+            live_results_enabled INTEGER DEFAULT 0,
+            live_splits_enabled INTEGER DEFAULT 0,
+            live_cp_codes TEXT,
+            live_finish_enabled INTEGER DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (competition_id) REFERENCES competitions(id) ON DELETE CASCADE,
+            UNIQUE(competition_id)
         )
     )");
 
@@ -354,14 +325,6 @@ void DatabaseManager::createViews()
         LEFT JOIN distances dist ON p.distance_id = dist.id
         LEFT JOIN age_groups ag ON p.age_group_id = ag.id
     )");
-
-    // qDebug() << "=== СТРУКТУРА v_results_details ===";
-    // QSqlQuery testQuery("PRAGMA table_info(v_results_details)", m_db);
-    // while (testQuery.next()) {
-    //     qDebug() << "Колонка" << testQuery.value(0).toInt() << ":"
-    //              << testQuery.value(1).toString() << "тип:"
-    //              << testQuery.value(2).toString();
-    // }
 }
 
 void DatabaseManager::createIndexes()
@@ -369,6 +332,7 @@ void DatabaseManager::createIndexes()
     QSqlQuery query(m_db);
 
     query.exec("CREATE INDEX IF NOT EXISTS idx_participants_competition ON participants(competition_id)");
+    query.exec("CREATE INDEX IF NOT EXISTS idx_orgeo_configs_competition ON orgeo_configs(competition_id)");
     query.exec("CREATE INDEX IF NOT EXISTS idx_participants_delegation ON participants(delegation_id)");
     query.exec("CREATE INDEX IF NOT EXISTS idx_participants_distance ON participants(distance_id)");
     query.exec("CREATE INDEX IF NOT EXISTS idx_participants_bib ON participants(bib_number)");
@@ -396,14 +360,19 @@ bool DatabaseManager::createRecord(const QString& tableName, const QHash<QString
                       .arg(tableName,fieldNames.join(", "),placeholders.join(", "));
 
     QSqlQuery query(m_db);
-    query.prepare(sql);
-
-    for (const QString& field : fieldNames) {
-        query.addBindValue(data[field]);
+    if (!query.prepare(sql)) {
+        qWarning() << "Failed to prepare insert into" << tableName << ":"
+                   << query.lastError().text();
+        emit databaseError(query.lastError().text());
+        return false;
     }
 
+    for (const QString& field : fieldNames)
+        query.addBindValue(data[field]);
+
     if (!query.exec()) {
-        qWarning() << "Failed to create record in" << tableName << ":" << query.lastError().text();
+        qWarning() << "Failed to create record in" << tableName << ":"
+                   << query.lastError().text();
         emit databaseError(query.lastError().text());
         return false;
     }
@@ -432,7 +401,12 @@ bool DatabaseManager::updateRecord(const QString& tableName, qint64 id, const QH
                       .arg(tableName,updates.join(", "));
 
     QSqlQuery query(m_db);
-    query.prepare(sql);
+    if (!query.prepare(sql)) {
+        qWarning() << "Failed to prepare update " << tableName << ":"
+                   << query.lastError().text();
+        emit databaseError(query.lastError().text());
+        return false;
+    }
 
     for (const QString& field : fieldNames) {
         query.addBindValue(data[field]);
@@ -457,7 +431,12 @@ bool DatabaseManager::deleteRecord(const QString& tableName, qint64 id)
 
     QString sql = QString("DELETE FROM %1 WHERE id = ?").arg(tableName);
     QSqlQuery query(m_db);
-    query.prepare(sql);
+    if (!query.prepare(sql)) {
+        qWarning() << "Failed to prepare delete into" << tableName << ":"
+                   << query.lastError().text();
+        emit databaseError(query.lastError().text());
+        return false;
+    }
     query.addBindValue(id);
 
     if (!query.exec()) {
@@ -479,7 +458,11 @@ QHash<QString, QVariant> DatabaseManager::readRecord(const QString& tableName, q
 
     QString sql = QString("SELECT * FROM %1 WHERE id = ?").arg(tableName);
     QSqlQuery query(m_db);
-    query.prepare(sql);
+    if (!query.prepare(sql)) {
+        qWarning() << "Failed to prepare rear into" << tableName << ":"
+                   << query.lastError().text();
+        return result;
+    }
     query.addBindValue(id);
 
     if (query.exec() && query.next()) {
@@ -509,7 +492,11 @@ QList<qint64> DatabaseManager::findRecords(const QString& tableName, const QStri
     }
 
     QSqlQuery query(m_db);
-    query.prepare(sql);
+    if (!query.prepare(sql)) {
+        qWarning() << "Failed to prepare findRecord into" << tableName << ":"
+                   << query.lastError().text();
+        return result;
+    }
 
     if (!field.isEmpty()) {
         query.addBindValue(value);
@@ -688,7 +675,12 @@ bool DatabaseManager::executeQuery(const QString& sql, const QHash<QString, QVar
     }
 
     QSqlQuery query(m_db);
-    query.prepare(sql);
+    if (!query.prepare(sql)) {
+        qWarning() << "Failed to prepare executeQuery into" << ":"
+                   << query.lastError().text();
+        emit databaseError(query.lastError().text());
+        return false;
+    }
 
     for (auto it = params.constBegin(); it != params.constEnd(); ++it) {
         query.bindValue(":" + it.key(), it.value());
@@ -706,17 +698,17 @@ bool DatabaseManager::executeQuery(const QString& sql, const QHash<QString, QVar
 QList<QHash<QString, QVariant>> DatabaseManager::executeSelect(const QString& sql, const QHash<QString, QVariant>& params)
 {
     QList<QHash<QString, QVariant>> result;
-
-    if (!m_db.isOpen() || sql.isEmpty()) {
-        return result;
-    }
+    if (!m_db.isOpen() || sql.isEmpty()) return result;
 
     QSqlQuery query(m_db);
-    query.prepare(sql);
-
-    for (auto it = params.constBegin(); it != params.constEnd(); ++it) {
-        query.bindValue(":" + it.key(), it.value());
+    if (!query.prepare(sql)) {
+        qWarning() << "Failed to prepare select:" << query.lastError().text()
+                   << "\nSQL:" << sql;
+        emit databaseError(query.lastError().text());
+        return result;                                     // ← не пытаемся exec
     }
+    for (auto it = params.constBegin(); it != params.constEnd(); ++it)
+        query.bindValue(":" + it.key(), it.value());
 
     if (query.exec()) {
         while (query.next()) {
@@ -728,9 +720,10 @@ QList<QHash<QString, QVariant>> DatabaseManager::executeSelect(const QString& sq
             result.append(record);
         }
     } else {
-        qWarning() << "Failed to execute select:" << query.lastError().text();
+        qWarning() << "Failed to execute select:" << query.lastError().text()
+                   << "\nSQL:" << sql;
+        emit databaseError(query.lastError().text());
     }
-
     return result;
 }
 
@@ -748,4 +741,41 @@ void DatabaseManager::cleanup()
     if (m_db.isOpen()) {
         m_db.close();
     }
+}
+
+int DatabaseManager::userVersion()
+{
+    QSqlQuery q(m_db);
+    if (q.exec("PRAGMA user_version") && q.next())
+        return q.value(0).toInt();
+    return 0;
+}
+
+void DatabaseManager::setUserVersion(int v)
+{
+    QSqlQuery q(m_db);
+    q.exec(QString("PRAGMA user_version = %1").arg(v));
+}
+
+void DatabaseManager::applyColumnMigrations()
+{
+    const int v = userVersion();
+    if (v >= SCHEMA_VERSION) return;
+
+    QSqlQuery q(m_db);
+    q.exec("BEGIN");
+
+    // v < 1 — «нулевая» БД: ничего ALTER-ить не надо,
+    // всё уже создано через createTables()/createViews()/createIndexes().
+    // Всё, что >= 1 — это будущие точечные изменения столбцов.
+
+    // Пример — если когда-нибудь понадобится поле comment у сплитов:
+    // if (v < 2) {
+    //     q.exec("ALTER TABLE control_point_times ADD COLUMN comment TEXT");
+    // }
+
+    // if (v < 3) { q.exec("ALTER TABLE participants ADD COLUMN something TEXT"); }
+
+    setUserVersion(SCHEMA_VERSION);
+    q.exec("COMMIT");
 }

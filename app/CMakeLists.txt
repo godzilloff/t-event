@@ -27,6 +27,7 @@ set(PROJECT_SOURCES
         src/recentfile.cpp
         src/functions.h src/functions.cpp
         src/postrequestsender.h src/postrequestsender.cpp
+        src/orgeoservice.h src/orgeoservice.cpp
 
         src/core/DatabaseManager.cpp
         src/core/DatabaseManager.h

@@ -17,16 +17,19 @@ public:
     explicit PostRequestSender(QObject *parent = nullptr);
     ~PostRequestSender();
 
-signals:
-    void responseReceived(const QString &response);
-
 public slots:
-    void handleResponse(QNetworkReply *reply);
     void sendRequest(const QUrl &url, const QJsonObject &jsonData);
 
-private:
-    QNetworkAccessManager manager;
+signals:
+    // httpStatus, тело, заголовок ORGEO-ONLINE-RESPONSE-MESSAGE
+    void responseReceived(int httpStatus, const QString& body, const QString& headerMessage);
+    void requestFailed(const QString& errorString);
 
+private slots:
+    void onReplyFinished(QNetworkReply *reply);
+
+private:
+    QNetworkAccessManager m_manager;
 };
 
 #endif // POSTREQUESTSENDER_H

@@ -536,6 +536,81 @@ bool Document::createCompetition(const QString& name, const QDate& date)
     return true;
 }
 
+OrgeoConfig Document::getOrgeoConfig() const
+{
+    OrgeoConfig config;
+    if (!isOpen()) return config;
+
+    auto& db = DatabaseManager::instance();
+    QHash<QString, QVariant> p;
+    p["competition_id"] = m_competitionId;
+
+    auto rows = db.executeSelect(
+        "SELECT * FROM orgeo_configs WHERE competition_id = :competition_id", p);
+
+    if (rows.isEmpty()) {
+        config.competitionId = m_competitionId;
+        return config;
+    }
+
+    const auto& r = rows.first();
+    config.id              = r["id"].toLongLong();
+    config.competitionId   = r["competition_id"].toLongLong();
+    config.liveUrl         = r["live_url"].toString();
+    config.liveEnabled     = r["live_enabled"].toInt() != 0;
+    config.resultsEnabled  = r["live_results_enabled"].toInt() != 0;
+    config.splitsEnabled   = r["live_splits_enabled"].toInt() != 0;
+    config.cpCodes         = r["live_cp_codes"].toString();
+    config.finishEnabled   = r["live_finish_enabled"].toInt() != 0;
+    return config;
+}
+
+bool Document::saveOrgeoConfig(OrgeoConfig& config)
+{
+    if (!isOpen()) {
+        qWarning() << "saveOrgeoConfig: документ не открыт";
+        return false;
+    }
+
+    auto& db = DatabaseManager::instance();
+
+    // Определяем id существующей записи, НЕ полагаясь на config.id.
+    // Это устраняет UNIQUE-гонку, если config.id устарел.
+    QHash<QString, QVariant> params;
+    params["competition_id"] = m_competitionId;
+    auto rows = db.executeSelect(
+        "SELECT id FROM orgeo_configs WHERE competition_id = :competition_id",
+        params);
+
+    qint64 existingId = -1;
+    if (!rows.isEmpty())
+        existingId = rows.first()["id"].toLongLong();
+    else if (config.id > 0)
+        existingId = config.id;   // страховка
+
+    QHash<QString, QVariant> data;
+    data["live_url"]             = config.liveUrl;
+    data["live_enabled"]         = config.liveEnabled    ? 1 : 0;
+    data["live_results_enabled"] = config.resultsEnabled ? 1 : 0;
+    data["live_splits_enabled"]  = config.splitsEnabled  ? 1 : 0;
+    data["live_cp_codes"]        = config.cpCodes;
+    data["live_finish_enabled"]  = config.finishEnabled  ? 1 : 0;
+
+    bool ok = false;
+    if (existingId > 0) {
+        // Update через Document::updateRecord → undo-стек работает
+        ok = updateRecord("orgeo_configs", existingId, data);
+        if (ok) config.id = existingId;
+    } else {
+        // insertRecord сам добавит competition_id и запушит undo-команду
+        const qint64 newId = insertRecord("orgeo_configs", data);
+        ok = (newId > 0);
+        if (ok) config.id = newId;   // ← ключевое: id больше не теряется
+    }
+
+    return ok;
+}
+
 QString Document::fileName() const
 {
     if (m_filePath.isEmpty()) {

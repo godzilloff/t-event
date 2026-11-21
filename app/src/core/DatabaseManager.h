@@ -63,7 +63,6 @@ public:
     void setCurrentCompetitionId(qint64 id);
 
     // Проверка и создание таблиц
-    bool checkAndCreateTables();
     void vacuumDatabase();
 
     // Резервное копирование
@@ -88,6 +87,11 @@ private:
     bool tableExists(const QString& tableName) const;
     bool dropTable(const QString& tableName);
     void cleanup();
+
+    static constexpr int SCHEMA_VERSION = 2;   // ← поднимайте на 1 при каждой миграции
+    int  userVersion();
+    void setUserVersion(int v);
+    void applyColumnMigrations();
 
     QSqlDatabase m_db;
     qint64 m_currentCompetitionId = -1;

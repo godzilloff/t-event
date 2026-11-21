@@ -13,6 +13,8 @@
 #include "formonline.h"
 #include "settingsdialog.h"
 #include "postrequestsender.h"
+#include "orgeoservice.h"
+#include "forminfo.h"
 
 #include "core/ResultProcessor.h"
 
@@ -41,6 +43,7 @@ class AgeGroupEditDialog;
 class SettingsDialog;
 class PostRequestSender;
 class FormOnline;
+class OrgeoService;
 
 
 class MainWindow : public QMainWindow
@@ -104,6 +107,8 @@ private slots:
     void onDeleteRecord();
     void onDoubleClickRecord(const QModelIndex& index);
 
+    void act_info_triggered();
+
     // Вкладки и поиск
     void onTabChanged(int index);
     void onSearchTextChanged(const QString& text);
@@ -128,8 +133,12 @@ private slots:
     // void on_act_show_dists_triggered();
     // void on_act_show_orgs_triggered();
     void on_act_comport_dialogset_triggered();
-    // void on_act_online_triggered();
-    // void requestOnline(const QString &number);
+
+    void on_act_send_clear_all_triggered();
+    void on_act_send_start_list_triggered();
+    void on_act_send_all_results_triggered();
+    void on_act_online_triggered();
+
     // void on_act_save_as_triggered();
     // void onTablePerson_dblclk(const QModelIndex &index);
     // void onTableResult_dblclk(const QModelIndex &index);
@@ -144,6 +153,12 @@ private slots:
     void on_act_Sync_triggered();
     void on_act_insert_triggered();
     void on_act_connect_printer_triggered(bool checked);
+
+    // Фильтр в результатах
+    void onResultFilterGroupChanged(int index);
+    void onResultFilterDistanceChanged(int index);
+    void onResultFilterTeamChanged(int index);
+    void onResultFilterResetClicked();
 
 private:
     // Инициализация
@@ -169,6 +184,10 @@ private:
     void setupTableViewHeaders();
     void setupDelegates();
     void updateCompetitionFilters();
+
+    // Фильтр результатов
+    void populateResultFilters();       // заполнить комбобоксы из БД
+    void refreshResultFilterCounters(); // опционально: показать число видимых строк
 
     // Работа с данными
     //void checkAndInitDatabase();
@@ -233,6 +252,8 @@ private:
     // Диалоги
     FormOnline* ui_online;
     SettingsDialog* ui_com_settings;
+    FormInfo*       ui_info = nullptr;
+    OrgeoService* m_orgeoService = nullptr;
 
     // COM порт
     void displayCardData(const SportIdent::CardData& cardData);
