@@ -7,6 +7,7 @@
 struct PrintSettings {
     int width = 464;           // ширина в точках (58мм)
     int maxHeight = 1500;      // максимальная высота
+    int margin = 10;
     int leftMargin = 1;       // левый отступ
     int rightMargin = 1;      // правый отступ
     int topMargin = 10;        // верхний отступ

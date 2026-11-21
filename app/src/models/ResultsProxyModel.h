@@ -61,6 +61,16 @@ public:
     void setTimePrecision(TimePrecision precision);
     TimePrecision timePrecision() const { return m_timePrecision; }
 
+    // Фильтры отображения (пустая строка = «все»)
+    void setFilterGroup(const QString& group);
+    void setFilterDistance(const QString& distance);
+    void setFilterTeam(const QString& team);
+    void clearFilters();
+
+    QString filterGroup()    const { return m_filterGroup; }
+    QString filterDistance() const { return m_filterDistance; }
+    QString filterTeam()     const { return m_filterTeam; }
+
 signals:
     void calculationStarted();
     void calculationFinished();
@@ -116,6 +126,15 @@ private:
     QString extractTimeFromDateTime(const QString& dateTimeStr) const;
     QString formatTimeWithPrecision(const QTime& time) const;
     TimePrecision m_timePrecision = TimePrecision::Seconds;
+
+    QString m_filterGroup;
+    QString m_filterDistance;
+    QString m_filterTeam;
+
+    // Вспомогательный доступ к исходным колонкам по строке
+    QString ageGroupForSourceRow(int sourceRow) const;
+    QString distanceForSourceRow(int sourceRow) const;
+    QString delegationForSourceRow(int sourceRow) const;
 };
 
 #endif // RESULTSPROXYMODEL_H

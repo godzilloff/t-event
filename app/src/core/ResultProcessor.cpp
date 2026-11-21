@@ -3,12 +3,20 @@
 #include "ResultProcessor.h"
 #include "Document.h"
 #include "DatabaseManager.h"
+#include "functions.h"
 
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QDebug>
+
+#include <QCoreApplication>
+#include <QDate>
+#include <QTime>
+#include <QFile>
+#include <QTextStream>
+#include <QRegularExpression>
 
 ResultProcessor::ResultProcessor(Document* document, QObject* parent)
     : QObject(parent)
@@ -19,7 +27,10 @@ ResultProcessor::ResultProcessor(Document* document, QObject* parent)
 
 bool ResultProcessor::processCardData(const SportIdent::CardData& cardData, QWidget* parentWidget)
 {
-    if (!m_document->isOpen()) {
+    // Сначала — лог в backup.txt рядом с .exe
+    appendCardDataToBackup(cardData);
+
+    if (m_document == nullptr) {
         emit resultProcessingFailed(tr("Документ не открыт"), cardData);
         return false;
     }
@@ -39,11 +50,13 @@ bool ResultProcessor::processCardData(const SportIdent::CardData& cardData, QWid
         }
         
         // Участник не найден - спрашиваем пользователя
-        participantId = createOrGetParticipant(cardData, parentWidget);
+        QString bib;
+        participantId = createOrGetParticipant(cardData, parentWidget, &bib);
         if (participantId == -1) {
             emit resultProcessingFailed(tr("Не удалось определить участника"), cardData);
             return false;
         }
+        appendChipBibMapping(cardData.cardNumber, bib);
     }
     
     // Проверяем, нет ли уже результата для этого участника
@@ -107,7 +120,8 @@ qint64 ResultProcessor::findParticipantByChipNumber(uint32_t chipNumber) const
 }
 
 qint64 ResultProcessor::createOrGetParticipant(const SportIdent::CardData& cardData, 
-                                                QWidget* parentWidget)
+                                                QWidget* parentWidget,
+                                                QString* outBib )
 {
     if (!parentWidget) {
         return -1;
@@ -128,6 +142,9 @@ qint64 ResultProcessor::createOrGetParticipant(const SportIdent::CardData& cardD
     if (!ok || bibNumber.isEmpty()) {
         return -1;
     }
+
+    if (outBib)
+        *outBib = bibNumber;
     
     // Ищем участника по bib номеру
     auto& db = DatabaseManager::instance();
@@ -209,9 +226,12 @@ qint64 ResultProcessor::createResultRecord(const SportIdent::CardData& cardData,
     if (resultId == -1) {
         return -1;
     }
-    
-    // Сохраняем отметки КП
-    saveControlPointTimes(resultId, cardData.punches);
+
+    if (resultId != -1) {
+        // Сохраняем отметки КП
+        saveControlPointTimes(resultId, cardData.punches);
+        emit resultReadyForUpload(resultId);
+    }
     
     return resultId;
 }
@@ -241,4 +261,181 @@ void ResultProcessor::saveControlPointTimes(qint64 resultId,
     }
     
     db.commitTransaction();
+}
+
+PrintResultData ResultProcessor::getPrintDataForParticipant(qint64 participantId) const
+{
+    PrintResultData data;
+
+    if (!m_document) {
+        return data;
+    }
+
+    auto& db = DatabaseManager::instance();
+
+    // Получаем данные участника
+    QString sql = R"(
+        SELECT
+            p.full_name,
+            p.bib_number,
+            p.chip_number,
+            p.start_time,
+            ag.name as age_group_name,
+            d.name as delegation_name,
+            r.result_time,
+            r.finish_time
+        FROM participants p
+        LEFT JOIN age_groups ag ON p.age_group_id = ag.id
+        LEFT JOIN delegations d ON p.delegation_id = d.id
+        LEFT JOIN results r ON r.participant_id = p.id
+        WHERE p.id = :participant_id
+    )";
+
+    QHash<QString, QVariant> params;
+    params["participant_id"] = participantId;
+
+    auto results = db.executeSelect(sql, params);
+    if (!results.isEmpty()) {
+        auto& record = results.first();
+
+        data.fullName = record["full_name"].toString();
+        data.bibNumber = record["bib_number"].toString();
+        data.chipNumber = record["chip_number"].toString();
+        data.ageGroup = record["age_group_name"].toString();
+        data.delegationName = record["delegation_name"].toString();
+
+        // Времена
+        QString startTimeStr = record["start_time"].toString();
+        if (!startTimeStr.isEmpty()) {
+            data.startTime = QDateTime::fromString(startTimeStr, Qt::ISODate);
+        }
+
+        QString finishTimeStr = record["finish_time"].toString();
+        if (!finishTimeStr.isEmpty()) {
+            data.finishTime = QDateTime::fromString(finishTimeStr, Qt::ISODate);
+        }
+
+        data.resultSeconds = record["result_time"].toInt();
+    }
+
+    // Информация о соревновании
+    data.competitionName = m_document->competitionName();
+    data.competitionDate = QDate::currentDate(); // или из документа
+
+    // Формируем URL для online результатов
+    if (!m_onlineResultsBaseUrl.isEmpty()) {
+        data.onlineResultsUrl = QString("%1/result/%2")
+                                    .arg(m_onlineResultsBaseUrl)
+                                    .arg(participantId);
+    }
+
+    return data;
+}
+
+QString ResultProcessor::formatCardTime(const QDateTime& dt)
+{
+    if (!dt.isValid())
+        return QStringLiteral("00:00:00.0");
+
+    const QTime t = dt.time();
+    // Округляем до десятых долей секунды
+    int tenths = (t.msec() + 50) / 100;   // 0..10
+    int h = t.hour();
+    int m = t.minute();
+    int s = t.second();
+    if (tenths == 10) {
+        tenths = 0;
+        if (++s == 60) { s = 0; if (++m == 60) { m = 0; if (++h == 24) h = 0; } }
+    }
+
+    return QStringLiteral("%1:%2:%3.%4")
+        .arg(h, 2, 10, QLatin1Char('0'))
+        .arg(m, 2, 10, QLatin1Char('0'))
+        .arg(s, 2, 10, QLatin1Char('0'))
+        .arg(tenths);
+}
+
+void ResultProcessor::appendCardDataToBackup(const SportIdent::CardData& cardData)
+{
+    const QString path = QCoreApplication::applicationDirPath()
+                         + QStringLiteral("/backup.txt");
+
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
+        qWarning() << "Не удалось открыть backup.txt:" << file.errorString();
+        return;
+    }
+
+    // Все времена — в десятых долях суток, уже округлённые
+    const qint64 clearT  = tenthsOfDay(cardData.clearTime);
+    const qint64 checkT  = tenthsOfDay(cardData.checkTime);
+    const qint64 startT  = tenthsOfDay(cardData.startTime);
+    const qint64 finishT = tenthsOfDay(cardData.finishTime);
+
+    // Результат считаем из ОКРУГЛЁННЫХ start/finish,
+    // чтобы строка была согласована с выведенными выше отметками.
+    qint64 resultT = -1;
+    if (startT >= 0 && finishT >= 0 && finishT >= startT)
+        resultT = finishT - startT;
+
+    // Время считывания — тоже в десятых, для единообразия
+    const QTime now = QTime::currentTime();
+    const qint64 nowTenths = (now.hour()   * 36000LL
+                              + now.minute() *   600LL
+                              + now.second() *    10LL
+                              + (now.msec() + 50) / 100);
+
+    QString line;
+    line.reserve(160);
+    line += QDate::currentDate().toString(QStringLiteral("dd.MM.yyyy"));
+    line += QLatin1Char(';');
+    line += formatTenths(nowTenths);
+    line += QLatin1Char(';');
+    line += QString::number(cardData.cardNumber);
+    line += QLatin1Char(';');
+    line += formatTenths(clearT);
+    line += QLatin1Char(';');
+    line += formatTenths(checkT);
+    line += QLatin1Char(';');
+    line += formatTenths(startT);
+    line += QLatin1Char(';');
+    line += formatTenths(finishT);
+    line += QLatin1Char(';');
+    line += formatTenths(resultT);
+    line += QLatin1Char('\n');
+
+    QTextStream out(&file);
+    out.setEncoding(QStringConverter::Utf8);
+    out << line;
+}
+
+void ResultProcessor::appendChipBibMapping(uint32_t cardNumber, const QString& bib)
+{
+    // Отдельный файл — семантически чище, чем мешать с backup.txt
+    const QString path = QCoreApplication::applicationDirPath()
+                         + QStringLiteral("/chips_bib.txt");
+
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
+        qWarning() << "Не удалось открыть chips_bib.csv:" << file.errorString();
+        return;
+    }
+
+    // Санитайзинг bib: убираем разделители и переводы строк
+    QString safeBib = bib;
+    safeBib.remove(QRegularExpression("[;\\r\\n]"));
+    safeBib = safeBib.trimmed();
+
+    QString line;
+    line.reserve(64);
+    line += QDateTime::currentDateTime().toString("dd.MM.yyyy;HH:mm:ss");
+    line += QLatin1Char(';');
+    line += QString::number(cardNumber);
+    line += QLatin1Char(';');
+    line += safeBib;
+    line += QLatin1Char('\n');
+
+    QTextStream out(&file);
+    out.setEncoding(QStringConverter::Utf8);
+    out << line;
 }

@@ -1,6 +1,5 @@
 #include "CsvImporter.h"
 #include "DatabaseManager.h"
-//#include "Document.h"
 #include <QFile>
 #include <QTextStream>
 #include <QDebug>

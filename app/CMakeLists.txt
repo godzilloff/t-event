@@ -63,6 +63,9 @@ set(PROJECT_SOURCES
         src/dialogs/AgeGroupEditDialog.cpp
         src/dialogs/AgeGroupEditDialog.h
 
+        src/dialogs/ResultEditDialog.cpp
+        src/dialogs/ResultEditDialog.h
+
         src/serial/isportident_interface.h
         src/serial/sportident_constants.h
         src/serial/sportident_cardmanager.h
@@ -81,6 +84,9 @@ set(PROJECT_SOURCES
         src/print/SerialPortManager.h    src/print/SerialPortManager.cpp
         src/print/PrinterFacade.h        src/print/PrinterFacade.cpp
         src/print/PrintPreviewWidget.h   src/print/PrintPreviewWidget.cpp
+        src/print/PrintResultStruct.h
+        src/print/ResultPrinter.h        src/print/ResultPrinter.cpp
+        src/print/SerialPortManager.h    src/print/SerialPortManager.cpp
 
 
         #src/qsportevent.h src/qsportevent.cpp

@@ -6,6 +6,7 @@
 #include <QObject>
 #include <QHash>
 #include "serial/sportident_types.h"
+#include "print/PrintResultStruct.h"
 
 class Document;
 class QWidget;
@@ -27,24 +28,35 @@ public:
     void setAskForMissingParticipant(bool ask) { m_askForMissingParticipant = ask; }
     bool askForMissingParticipant() const { return m_askForMissingParticipant; }
 
+    qint64 findParticipantByChipNumber(uint32_t chipNumber) const;
+    PrintResultData getPrintDataForParticipant(qint64 participantId) const;
+    void setOnlineResultsBaseUrl(const QString& url) { m_onlineResultsBaseUrl = url; }
+
 signals:
     void resultProcessed(qint64 resultId, const SportIdent::CardData& cardData);
     void resultProcessingFailed(const QString& reason, const SportIdent::CardData& cardData);
     void participantNotFound(uint32_t cardNumber, const SportIdent::CardData& cardData);
     void duplicateResultDetected(qint64 existingResultId, const SportIdent::CardData& cardData);
+    void resultReadyForUpload(qint64 resultId);
 
 private:
     Document* m_document;
     bool m_autoAssignBib = false;           // Автоматически назначать bib по номеру карты?
     bool m_askForMissingParticipant = true;  // Спрашивать если участник не найден?
-    
+    QString m_onlineResultsBaseUrl;
+
     // Кэш для быстрого поиска участников по номеру карты
     mutable QHash<uint32_t, qint64> m_participantCache;
-    
-    qint64 findParticipantByChipNumber(uint32_t chipNumber) const;
-    qint64 createOrGetParticipant(const SportIdent::CardData& cardData, QWidget* parentWidget);
+
+    qint64 createOrGetParticipant(const SportIdent::CardData& cardData, QWidget* parentWidget, QString* outBib = nullptr);
     qint64 createResultRecord(const SportIdent::CardData& cardData, qint64 participantId);
     void saveControlPointTimes(qint64 resultId, const QVector<SportIdent::Punch>& punches);
+
+    void appendCardDataToBackup(const SportIdent::CardData& cardData);
+    void appendChipBibMapping(uint32_t cardNumber, const QString& bib);
+
+    // формат времени карты; отсутствующее -> "00:00:00"
+    static QString formatCardTime(const QDateTime& dt);
 };
 
 #endif // RESULTPROCESSOR_H

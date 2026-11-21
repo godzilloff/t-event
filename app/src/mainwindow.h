@@ -80,6 +80,7 @@ private slots:
     void onPrintPreviewRequested();
     void onPrintImageRequested();
     void printResult(const SportIdent::CardData& cardData);
+    void onPrintResult();
 
     // Документ
     void onDocumentOpened();
@@ -215,10 +216,13 @@ private:
     QDialog* createEditDialogDelegation(const QString& tableName, qint64 recordId = -1);
     QDialog* createEditDialogAge(const QString& tableName, qint64 recordId = -1);
     QDialog* createEditDialogDist(const QString& tableName, qint64 recordId = -1);
+    QDialog* createEditDialogResult (const QString&, qint64);
 
     // Открытие документов
     void OpenTEvent(QString fpath);
     void createNewCompetition();
+
+    PrintResultData getPrintDataForParticipant(qint64 participantId, qint64 resultId);
 
 private:
     // UI элементы

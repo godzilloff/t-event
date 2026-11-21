@@ -13,6 +13,7 @@
 #include "dialogs/DelegationEditDialog.h"
 #include "dialogs/DistanceEditDialog.h"
 #include "dialogs/AgeGroupEditDialog.h"
+#include "dialogs/ResultEditDialog.h"
 
 #include "print/ImageGenerator.h"
 #include "print/PrinterFacade.h"
@@ -28,6 +29,7 @@
 #include <QStandardPaths>
 
 #include <QInputDialog>
+#include <QPushButton>
 
 #include <QSettings>
 #include <QDate>
@@ -69,6 +71,7 @@
 
 #include "print/PrinterFacade.h"
 #include "print/PrintPreviewWidget.h"
+#include "print/ResultPrinter.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
@@ -78,6 +81,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui_online(new FormOnline(this)),
     ui_com_settings(new SettingsDialog(this)),
+    ui_info(nullptr),
 
     fl_connectedComport(false),
     comport_timer(new QTimer(this)),
@@ -133,6 +137,19 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_previewWindow, &PrintPreviewWidget::printRequested,
             this, &MainWindow::onPrintImageRequested);
 
+    // Online
+    m_orgeoService = new OrgeoService(m_document, postSender, this);
+    connect(m_orgeoService, &OrgeoService::logMessage,
+            this, [this](const QString& m){ ui_log_msg("[Orgeo] " + m); });
+    connect(m_orgeoService, &OrgeoService::queueSizeChanged,
+            this, [this](int n){ statusBar()->showMessage(
+                                QString("Очередь Orgeo: %1").arg(n), 3000); });
+    connect(m_orgeoService, &OrgeoService::configChanged,
+            this, [this](){
+                ui_log_msg("[Orgeo] configChanged");
+            });
+
+    // End ctor
     qDebug() << "=== КОНСТРУКТОР ЗАВЕРШЕН ===\n";
 }
 
@@ -155,6 +172,8 @@ MainWindow::~MainWindow()
 void MainWindow::closeCurrentDocument()
 {
     if (m_document) {
+        if (m_orgeoService) m_orgeoService->setDocument(nullptr);
+
         // Отключаем все соединения с document
         disconnect(m_document, nullptr, this, nullptr);
 
@@ -245,7 +264,7 @@ void MainWindow::onPrintImageRequested() {
 
     if (m_printer.isConnected()){
         // Печатаем изображение
-        bool success = m_printer.printImage(m_processed_image);
+        bool success = m_printer.printImage(m_processed_image, ColorMode::WhiteTextOnBlackBackground);
         if (!success) {
             qDebug() << "Ошибка печати";
             QMessageBox::warning(this, "Ошибка", "Не удалось распечатать документ!");
@@ -255,28 +274,78 @@ void MainWindow::onPrintImageRequested() {
 
 void MainWindow::keyPressEvent(QKeyEvent *e)
 {
-    QWidget* focusedWidget =qApp->focusWidget();
+    QWidget* focusedWidget = qApp->focusWidget();
 
-    if ((e->key() == Qt::Key_K)&&(e->modifiers() & Qt::ControlModifier)){
-        ui_log_msg("Ctrl+K");
-        if (focusedWidget != nullptr){
-            ui_log_msg(focusedWidget->objectName());
-            if (focusedWidget->objectName() == "tableResult"){
-                if (QTableView *table = dynamic_cast<QTableView*>(focusedWidget)) {
-                    QModelIndex index = table->currentIndex();
-                    int row = index.row();
-                    QVariant value = index.model()->data(index.model()->index(row,4), Qt::DisplayRole);
-                    if (value.canConvert<QString>()) {
-                        QString str = value.value<QString>();
-                        qDebug() << str;
-                        //requestOnline(str);
-                    }
-                }
-            }
+    // ---------- Ctrl+K: отправить выделенный результат на Orgeo ----------
+    if (e->key() == Qt::Key_K && (e->modifiers() & Qt::ControlModifier)) {
+
+        // Реагируем только если фокус на таблице результатов
+        QTableView* tableResult = ui->tableResult;
+        const bool focusOnResults =
+            (focusedWidget == tableResult) ||
+            (focusedWidget && focusedWidget->parent() == tableResult);
+
+        if (!focusOnResults) {
+            // Ctrl+K в другом месте — пусть обрабатывается дальше
+            QMainWindow::keyPressEvent(e);
+            return;
         }
+
+        if (!m_document || !m_document->isOpen()) {
+            ui_log_msg("Ctrl+K: документ не открыт");
+            e->accept();
+            return;
+        }
+        if (!m_orgeoService) {
+            ui_log_msg("Ctrl+K: OrgeoService недоступен");
+            e->accept();
+            return;
+        }
+        if (!m_orgeoService->isEnabled() || !m_orgeoService->isResultsEnabled()) {
+            ui_log_msg("Ctrl+K: отправка результатов на Orgeo отключена "
+                       "(проверьте настройки Online)");
+            e->accept();
+            return;
+        }
+
+        // Получаем выделенную строку и её ID через прокси-модель
+        if (!m_proxyModels.contains("results")) {
+            ui_log_msg("Ctrl+K: прокси-модель results не найдена");
+            e->accept();
+            return;
+        }
+        AbstractProxyModel* proxy = m_proxyModels["results"];
+
+        const QModelIndexList selected =
+            tableResult->selectionModel()
+                ? tableResult->selectionModel()->selectedRows()
+                : QModelIndexList();
+
+        if (selected.isEmpty()) {
+            ui_log_msg("Ctrl+K: не выделена запись в таблице результатов");
+            e->accept();
+            return;
+        }
+
+        const QModelIndex proxyIdx = selected.first();
+        const qint64 resultId = proxy->recordId(proxyIdx);
+        if (resultId <= 0) {
+            ui_log_msg(QString("Ctrl+K: не удалось определить ID результата "
+                               "(получено %1)").arg(resultId));
+            e->accept();
+            return;
+        }
+
+        // Отправляем. Дальше OrgeoService сам логирует постановку в очередь
+        // и результат POST.
+        m_orgeoService->sendResult(resultId);
+        ui_log_msg(QString("Ctrl+K: результат ID=%1 отправлен на Orgeo")
+                       .arg(resultId));
+        e->accept();
+        return;
     }
 
-    // Добавить обработку Insert
+    // ---------- Insert: добавить запись ----------
     if (e->key() == Qt::Key_Insert) {
         // Проверяем, что фокус на таблице участников
         // if (focusedWidget == ui->tablePerson ||
@@ -288,21 +357,26 @@ void MainWindow::keyPressEvent(QKeyEvent *e)
         }
     }
 
-    // Undo/Redo через клавиатуру
-    if (e->key() == Qt::Key_Z && e->modifiers() & Qt::ControlModifier) {
-        if (e->modifiers() & Qt::ShiftModifier) {
-            // onRedo(); // Ctrl+Shift+Z = Redo
-            on_act_redo_triggered();
-        } else {
-            // onUndo(); // Ctrl+Z = Undo
-            on_act_undo_triggered();
+    // ---------- Ctrl+P: печать выделенного результата ----------
+    if (e->key() == Qt::Key_P && (e->modifiers() & Qt::ControlModifier)) {
+        if (focusedWidget == ui->tableResult ||
+            (focusedWidget && focusedWidget->parent() == ui->tableResult)) {
+            onPrintResult();
+            e->accept();
+            return;
         }
+    }
+
+    // ---------- Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y: undo/redo ----------
+    if (e->key() == Qt::Key_Z && (e->modifiers() & Qt::ControlModifier)) {
+        if (e->modifiers() & Qt::ShiftModifier)
+            on_act_redo_triggered(); // Ctrl+Shift+Z = Redo
+        else
+            on_act_undo_triggered(); // Ctrl+Z = Undo
         e->accept();
         return;
     }
-
-    if (e->key() == Qt::Key_Y && e->modifiers() & Qt::ControlModifier) {
-        // onRedo(); // Ctrl+Y = Redo
+    if (e->key() == Qt::Key_Y && (e->modifiers() & Qt::ControlModifier)) {
         on_act_redo_triggered();
         e->accept();
         return;
@@ -362,6 +436,7 @@ void MainWindow::initializeForDocument()
     // 3. Затем применяем фильтры и загружаем данные
     qDebug() << "Применяю фильтры...";
     applyCompetitionFilters(competitionId);
+    populateResultFilters();
 
     // 4. Настраиваем делегаты
     setupDelegates();
@@ -528,35 +603,320 @@ void MainWindow::onResultProcessed(qint64 resultId, const SportIdent::CardData& 
                    .arg(cardData.cardNumber).arg(resultId));
 
     if (m_flag_print) printResult(cardData);
+
+    if (m_orgeoService && m_orgeoService->isEnabled()) {
+        if (m_orgeoService->isResultsEnabled())
+            m_orgeoService->sendResult(resultId);
+        // Сплиты отправляются внутри buildPersonObject при splitsEnabled
+    }
 }
 
 void MainWindow::printResult(const SportIdent::CardData& cardData){
-    if(ui->act_connect_printer->isChecked() && m_printer.isConnected()){
-
-        //=================
-        // формирование текстового вывода
-
-        qint64 resultMs = cardData.startTime.msecsTo(cardData.finishTime);
-        QTime interval = QTime(0, 0, 0).addMSecs(resultMs);
-
-        QString split =
-            "Чип: " + QString::number(cardData.cardNumber)+"\n"+
-            "Старт: " + cardData.startTime.toString("HH:mm:ss.zzz").left(10)+"\n"+
-            "Финиш: " + cardData.finishTime.toString("HH:mm:ss.zzz").left(10)+"\n"+
-            "Результат: " + interval.toString("hh:mm:ss.zzz").left(10)+"\n";
-
-        //=================
-        // генерация изображения
-        ImageGenerator generator(m_currentSettings);
-        QImage image = generator.generateFromText(split);
-        m_processed_image = ImageProcessor::prepareForPrint(image, ColorMode::BlackTextOnWhiteBackground);
-
-        // Вызов предпросмотра
-        // onPrintPreviewRequested();
-
-        // Печать изображения
-        onPrintImageRequested();
+    if(!ui->act_connect_printer->isChecked() || !m_printer.isConnected()){
+        qDebug() << "Принтер не подключен";
+        return;
     }
+
+    // Находим участника по номеру карты
+    qint64 participantId = m_resultProcessor->findParticipantByChipNumber(cardData.cardNumber);
+    if (participantId == -1) {
+        qDebug() << "Участник не найден для карты:" << cardData.cardNumber;
+        return;
+    }
+
+    // Получаем данные для печати
+    PrintResultData printData = m_resultProcessor->getPrintDataForParticipant(participantId);
+
+    // Обновляем времена из считанных данных
+    if (cardData.startTime.isValid()) {
+        printData.startTime = cardData.startTime;
+    }
+    if (cardData.finishTime.isValid()) {
+        printData.finishTime = cardData.finishTime;
+    }
+    if (cardData.startTime.isValid() && cardData.finishTime.isValid()) {
+        printData.resultSeconds = cardData.startTime.secsTo(cardData.finishTime);
+    }
+
+    // Получаем место и отставание, если есть
+    if (m_proxyModels.contains("results")) {
+        auto* proxy = qobject_cast<ResultsProxyModel*>(m_proxyModels["results"]);
+        if (proxy) {
+            // Получаем ранк из кеша
+            // Это потребует добавления метода в ResultsProxyModel
+            // proxy->getRankForParticipant(participantId);
+        }
+    }
+
+    // Генерируем изображение для печати
+    ResultPrinter resultPrinter;
+
+    // Устанавливаем базовый URL для online результатов (можно из настроек)
+    resultPrinter.setOnlineResultsBaseUrl("https://your-online-results.com");
+
+    PrintSettings settings;
+    settings.width = 384;  // 58mm принтер
+    settings.font = QFont("Arial", 18);
+    settings.bottomMargin  = 10;
+    settings.topMargin  = 10;
+    settings.leftMargin  = 10;
+    settings.rightMargin  = 10;
+
+    QImage printImage = resultPrinter.generateResultImage(printData, settings);
+
+    if (printImage.isNull()) {
+        qDebug() << "Не удалось сгенерировать изображение для печати";
+        return;
+    }
+
+    // Сохраняем для предпросмотра
+    m_processed_image = printImage;
+
+    // Показываем предпросмотр (опционально)
+    if (m_previewWindow) {
+        m_previewWindow->showPreview(printImage);
+    }
+
+    // Печатаем
+    bool success = m_printer.printImage(printImage, ColorMode::WhiteTextOnBlackBackground);
+    if (success) {
+        logMessage(tr("Результат для %1 успешно распечатан").arg(printData.fullName));
+    } else {
+        logMessage(tr("Ошибка печати результата для %1").arg(printData.fullName));
+    }
+}
+
+void MainWindow::onPrintResult()
+{
+    // Проверяем, что документ открыт
+    if (!m_document || !m_document->isOpen()) {
+        QMessageBox::warning(this, tr("Ошибка"),
+                             tr("Документ не открыт"));
+        return;
+    }
+
+    // Получаем выделенную строку в таблице результатов
+    QModelIndexList selectedRows = ui->tableResult->selectionModel()->selectedRows();
+    if (selectedRows.isEmpty()) {
+        QMessageBox::information(this, tr("Информация"),
+                                 tr("Выделите результат для печати"));
+        return;
+    }
+
+    // Берем первую выделенную строку
+    QModelIndex selectedIndex = selectedRows.first();
+
+    // Получаем прокси-модель результатов
+    if (!m_proxyModels.contains("results")) {
+        qWarning() << "Proxy model for results not found";
+        return;
+    }
+
+    AbstractProxyModel* proxyModel = m_proxyModels["results"];
+
+    // Получаем ID результата из прокси-модели
+    qint64 resultId = proxyModel->recordId(selectedIndex);
+    if (resultId <= 0) {
+        QMessageBox::warning(this, tr("Ошибка"),
+                             tr("Не удалось определить ID результата"));
+        return;
+    }
+
+    // Получаем исходную модель
+    if (!m_tableModels.contains("results")) {
+        qWarning() << "Source model for results not found";
+        return;
+    }
+
+    SqlTableModel* sourceModel = m_tableModels["results"];
+
+    // Находим participant_id для этого результата
+    qint64 participantId = -1;
+    for (int row = 0; row < sourceModel->rowCount(); ++row) {
+        QModelIndex idIndex = sourceModel->index(row, 0); // колонка ID результата
+        if (sourceModel->data(idIndex).toLongLong() == resultId) {
+            QModelIndex participantIndex = sourceModel->index(row, 11); // колонка participant_id
+            participantId = sourceModel->data(participantIndex).toLongLong();
+            break;
+        }
+    }
+
+    if (participantId <= 0) {
+        QMessageBox::warning(this, tr("Ошибка"),
+                             tr("Не удалось определить ID участника"));
+        return;
+    }
+
+    // Получаем данные для печати
+    PrintResultData printData = getPrintDataForParticipant(participantId, resultId);
+
+    // Добавляем информацию о месте и отставании
+    if (m_proxyModels.contains("results")) {
+        auto* resultsProxy = qobject_cast<ResultsProxyModel*>(m_proxyModels["results"]);
+        if (resultsProxy) {
+            // Получаем данные из прокси-модели для отображения
+            for (int row = 0; row < resultsProxy->rowCount(); ++row) {
+                QModelIndex idIndex = resultsProxy->index(row, 0);
+                if (resultsProxy->data(idIndex).toLongLong() == resultId) {
+                    // Место (виртуальная колонка 0)
+                    QModelIndex rankIndex = resultsProxy->index(row, resultsProxy->getSourceColumnCount() + 0);
+                    QString rank = resultsProxy->data(rankIndex).toString();
+                    if (rank != "—") {
+                        printData.rank = rank;
+                    }
+
+                    // Отставание (виртуальная колонка 1)
+                    QModelIndex lossIndex = resultsProxy->index(row, resultsProxy->getSourceColumnCount() + 1);
+                    QString timeLoss = resultsProxy->data(lossIndex).toString();
+                    if (timeLoss != "—" && timeLoss != "Лидер") {
+                        printData.timeLoss = timeLoss;
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    // Генерируем изображение для печати
+    ResultPrinter resultPrinter;
+
+    // Загружаем настройки URL из конфигурации (опционально)
+    QSettings settings("set.ini", QSettings::IniFormat);
+    settings.beginGroup("online");
+    QString onlineUrl = settings.value("resultsUrl", "").toString();
+    if (!onlineUrl.isEmpty()) {
+        resultPrinter.setOnlineResultsBaseUrl(onlineUrl);
+    }
+    settings.endGroup();
+
+    // Настройки печати
+    PrintSettings printSettings;
+    printSettings.width = 384;  // 58mm принтер
+    printSettings.font = QFont("Arial", 18);
+    printSettings.margin = 10;
+
+    QImage printImage = resultPrinter.generateResultImage(printData, printSettings);
+
+    if (printImage.isNull()) {
+        QMessageBox::warning(this, tr("Ошибка"),
+                             tr("Не удалось сгенерировать изображение для печати"));
+        return;
+    }
+
+    // Сохраняем для предпросмотра (опционально)
+    m_processed_image = printImage;
+
+    m_previewWindow->showPreview(printImage);
+}
+
+// mainwindow.cpp - добавьте новый метод
+PrintResultData MainWindow::getPrintDataForParticipant(qint64 participantId, qint64 resultId)
+{
+    PrintResultData data;
+
+    if (!m_document || !m_document->isOpen()) {
+        return data;
+    }
+
+    auto& db = DatabaseManager::instance();
+
+    // Полный SQL запрос для получения всех данных
+    QString sql = R"(
+        SELECT
+            p.full_name,
+            p.bib_number,
+            p.chip_number,
+            p.gender,
+            ag.name as age_group_name,
+            d.name as delegation_name,
+            r.start_time as race_start_time,
+            r.finish_time,
+            r.result_time,
+            c.name as competition_name,
+            c.date as competition_date
+        FROM participants p
+        LEFT JOIN age_groups ag ON p.age_group_id = ag.id
+        LEFT JOIN delegations d ON p.delegation_id = d.id
+        LEFT JOIN results r ON r.participant_id = p.id
+        LEFT JOIN competitions c ON c.id = p.competition_id
+        WHERE p.id = :participant_id AND r.id = :result_id
+    )";
+
+    QHash<QString, QVariant> params;
+    params["participant_id"] = participantId;
+    params["result_id"] = resultId;
+
+    auto results = db.executeSelect(sql, params);
+    if (!results.isEmpty()) {
+        auto& record = results.first();
+
+        // Информация об участнике
+        data.fullName = record["full_name"].toString();
+        data.bibNumber = record["bib_number"].toString();
+        data.chipNumber = record["chip_number"].toString();
+        data.ageGroup = record["age_group_name"].toString();
+        data.delegationName = record["delegation_name"].toString();
+
+        // Времена
+        QString startTimeStr = record["race_start_time"].toString();
+        if (!startTimeStr.isEmpty()) {
+            data.startTime = QDateTime::fromString(startTimeStr, Qt::ISODate);
+            // Если не распарсилось, пробуем другой формат
+            if (!data.startTime.isValid()) {
+                data.startTime = QDateTime::fromString(startTimeStr, "dd.MM.yyyy HH:mm:ss.zzz");
+            }
+        }
+
+        QString finishTimeStr = record["finish_time"].toString();
+        if (!finishTimeStr.isEmpty()) {
+            data.finishTime = QDateTime::fromString(finishTimeStr, Qt::ISODate);
+            if (!data.finishTime.isValid()) {
+                data.finishTime = QDateTime::fromString(finishTimeStr, "dd.MM.yyyy HH:mm:ss.zzz");
+            }
+        }
+
+        // Результат в секундах
+        QString resultTimeStr = record["result_time"].toString();
+        if (!resultTimeStr.isEmpty()) {
+            // Пробуем распарсить как строку времени
+            QTime resultTime = QTime::fromString(resultTimeStr, "hh:mm:ss.zzz");
+            if (resultTime.isValid()) {
+                data.resultSeconds = QTime(0,0,0).secsTo(resultTime);
+            } else {
+                // Пробуем как число секунд
+                data.resultSeconds = resultTimeStr.toInt();
+            }
+        }
+
+        // Информация о соревновании
+        data.competitionName = record["competition_name"].toString();
+        if (data.competitionName.isEmpty()) {
+            data.competitionName = m_document->competitionName();
+        }
+
+        QString dateStr = record["competition_date"].toString();
+        if (!dateStr.isEmpty()) {
+            data.competitionDate = QDate::fromString(dateStr, Qt::ISODate);
+            if (!data.competitionDate.isValid()) {
+                data.competitionDate = QDate::fromString(dateStr, "dd.MM.yyyy");
+            }
+        }
+        if (!data.competitionDate.isValid()) {
+            data.competitionDate = QDate::currentDate();
+        }
+
+        // Формируем URL для online результатов
+        QSettings settings("set.ini", QSettings::IniFormat);
+        settings.beginGroup("online");
+        QString baseUrl = settings.value("resultsUrl", "").toString();
+        settings.endGroup();
+
+        if (!baseUrl.isEmpty()) {
+            data.onlineResultsUrl = QString("%1/result/%2").arg(baseUrl).arg(participantId);
+        }
+    }
+
+    return data;
 }
 
 void MainWindow::highlightResult(qint64 resultId)
@@ -1147,6 +1507,18 @@ void MainWindow::refreshTable(const QString& tableName)
             onTableDataLoaded(tableName);
             m_updatingTable = false;
         }
+
+        if (m_proxyModels.contains(tableName)) {
+            if (auto* proxy = m_proxyModels.value(tableName)) {
+                proxy->invalidate();          // фильтр + сортировка
+            }
+        }
+
+        if (tableName == "results") {
+            if (auto* rp = qobject_cast<ResultsProxyModel*>(m_proxyModels.value("results"))) {
+                rp->recalculateRanks();
+            }
+        }
     }
 
     // Если эта таблица отображается на текущей вкладке — обновляем вид
@@ -1211,6 +1583,10 @@ void MainWindow::setupUi()
 
     ui->act_connect_printer->setCheckable(true);
 
+    ui->tableResult->setToolTip(
+        tr("Ctrl+K — отправить выделенный результат на Orgeo\n"
+           "Ctrl+P — печать выделенного результата"));
+
     // Устанавливаем текущую вкладку
     m_currentTable = m_tabTableMap.value(ui->tabWidget->currentIndex(), "participants");
 }
@@ -1225,12 +1601,18 @@ void MainWindow::setupTimerStatusBar(){
 
 void MainWindow::initActionsConnections()
 {
-    connect(ui->act_new, &QAction::triggered, this, &MainWindow::onNewDocument); // !
-    connect(ui->act_open, &QAction::triggered, this, &MainWindow::onOpenDocument);
+    connect(ui->act_new, &QAction::triggered, this, &MainWindow::onNewDocument,
+            Qt::UniqueConnection); // !
+    connect(ui->act_open, &QAction::triggered, this, &MainWindow::onOpenDocument,
+            Qt::UniqueConnection);
     //connect(ui->act_filtr, &QAction::triggered, this, &MainWindow::onShowFilter);
     //connect(ui->act_preparation, &QAction::triggered, this, &MainWindow::onShowPrep);
-    connect(ui->act_save_as, &QAction::triggered, this, &MainWindow::SaveAsDocument);
-    connect(ui->act_save, &QAction::triggered, this, &MainWindow::SaveDocument);
+    connect(ui->act_save_as, &QAction::triggered, this, &MainWindow::SaveAsDocument,
+            Qt::UniqueConnection);
+    connect(ui->act_save, &QAction::triggered, this, &MainWindow::SaveDocument,
+            Qt::UniqueConnection);
+
+    connect(ui->act_info, &QAction::triggered, this, &MainWindow::act_info_triggered);
 
     //connect(ui->act_connect_comport, &QAction::triggered, this, &MainWindow::openSerialPort);
     //connect(ui->act_disconnect_comport, &QAction::triggered, this, &MainWindow::closeSerialPort);
@@ -1248,6 +1630,24 @@ void MainWindow::initActionsConnections()
                 model->sort(logicalIndex, ui->tableResult->horizontalHeader()->sortIndicatorOrder());
             }
     });
+
+    // --- Фильтры таблицы результатов ---
+    if (ui->cbFilterGroup) {
+        connect(ui->cbFilterGroup, QOverload<int>::of(&QComboBox::currentIndexChanged),
+                this, &MainWindow::onResultFilterGroupChanged);
+    }
+    if (ui->cbFilterDistance) {
+        connect(ui->cbFilterDistance, QOverload<int>::of(&QComboBox::currentIndexChanged),
+                this, &MainWindow::onResultFilterDistanceChanged);
+    }
+    if (ui->cbFilterTeam) {
+        connect(ui->cbFilterTeam, QOverload<int>::of(&QComboBox::currentIndexChanged),
+                this, &MainWindow::onResultFilterTeamChanged);
+    }
+    if (ui->btnFilterReset) {
+        connect(ui->btnFilterReset, &QToolButton::clicked,
+                this, &MainWindow::onResultFilterResetClicked);
+    }
 }
 
 void MainWindow::setupConnections()
@@ -1300,6 +1700,136 @@ void MainWindow::on_act_comport_dialogset_triggered(){
     ui_com_settings->show();
 }
 
+void MainWindow::on_act_send_clear_all_triggered()
+{
+    if (!m_document || !m_document->isOpen()) {
+        QMessageBox::information(this, tr("Очистка Orgeo"),
+                                 tr("Сначала откройте соревнование."));
+        return;
+    }
+
+    if (!m_orgeoService) return;
+
+    const OrgeoConfig cfg = m_orgeoService->config();
+    if (!cfg.liveEnabled || cfg.liveUrl.isEmpty()) {
+        QMessageBox::warning(this, tr("Очистка Orgeo"),
+                             tr("Трансляция отключена или не задан URL.\n"
+                                "Настройте их через «Опции → Online»."));
+        return;
+    }
+
+    if (m_orgeoService->isUploading()) {
+        QMessageBox::information(this, tr("Очистка Orgeo"),
+                                 tr("Дождитесь завершения текущей отправки, затем повторите."));
+        return;
+    }
+
+    // ---------- Шаг 1: подтверждение очистки ----------
+    {
+        QMessageBox box(this);
+        box.setIcon(QMessageBox::Warning);
+        box.setWindowTitle(tr("Очистка данных на Orgeo"));
+        box.setText(tr("Будут УДАЛЕНЫ все данные текущего дня на сервере Orgeo:\n"
+                       "  • стартовый протокол,\n"
+                       "  • все результаты,\n"
+                       "  • все промежуточные отсечки (splits).\n\n"
+                       "URL: %1\n\n"
+                       "Это действие необратимо. Продолжить?")
+                        .arg(cfg.liveUrl));
+
+        QPushButton* btnYes = box.addButton(tr("Да, удалить"), QMessageBox::YesRole);
+        QPushButton* btnNo  = box.addButton(tr("Нет"),          QMessageBox::NoRole);
+
+        box.setDefaultButton(btnNo);   // безопасный дефолт — «Нет»
+        box.setEscapeButton(btnNo);    // Esc == «Нет»
+        box.exec();
+
+        if (box.clickedButton() != btnYes) return;
+    }
+
+    // ---------- Шаг 2: перезалить стартовый протокол? ----------
+    bool rebuild = false;
+    {
+        QMessageBox box(this);
+        box.setIcon(QMessageBox::Question);
+        box.setWindowTitle(tr("Очистка данных на Orgeo"));
+        box.setText(tr("После очистки сразу загрузить заново "
+                       "стартовый протокол из локальной базы?\n\n"
+                       "«Да»     — очистить и сразу залить протокол;\n"
+                       "«Нет»    — только очистить (протокол залить позже вручную);\n"
+                       "«Отмена» — НЕ очищать сайт, действие полностью отменяется."));
+
+        QPushButton const *btnYes    = box.addButton(tr("Да, очистить и залить протокол"),
+                                            QMessageBox::YesRole);
+        QPushButton *btnCancel = box.addButton(tr("Отмена"),
+                                               QMessageBox::RejectRole);
+        box.addButton(tr("Нет, только очистить"),QMessageBox::NoRole);
+
+        box.setDefaultButton(btnCancel);   // безопасный дефолт — «Отмена»
+        box.setEscapeButton(btnCancel);    // Esc == «Отмена»
+        box.exec();
+
+        if (box.clickedButton() == btnCancel) {
+            ui_log_msg("[Orgeo] Очистка отменена пользователем");
+            return;   // ← сайт НЕ очищаем
+        }
+        rebuild = (box.clickedButton() == btnYes);
+    }
+
+    // ---------- Шаг 3: очистка ----------
+    m_orgeoService->sendClearAll();
+
+    // ---------- Шаг 4: опциональная перезаливка протокола ----------
+    if (rebuild) {
+        QTimer::singleShot(500, this, [this]() {
+            if (!m_orgeoService) return;
+            m_orgeoService->sendStartList();
+            ui_log_msg("[Orgeo] Стартовый протокол поставлен в очередь "
+                       "после очистки");
+        });
+    }
+}
+
+void MainWindow::on_act_send_start_list_triggered()
+{
+    if (!m_document || !m_document->isOpen()) return;
+    m_orgeoService->sendStartList();
+}
+
+void MainWindow::on_act_send_all_results_triggered()
+{
+    if (!m_document || !m_document->isOpen()) return;
+    m_orgeoService->sendAllPendingResults();
+}
+
+void MainWindow::on_act_online_triggered()
+{
+    if (!m_document || !m_document->isOpen()) {
+        QMessageBox::information(this, tr("Online"),
+                                 tr("Сначала откройте соревнование."));
+        return;
+    }
+
+    ui_online->setConfig(m_orgeoService->config());
+
+    disconnect(ui_online, &FormOnline::configSaved, nullptr, nullptr);
+    connect(ui_online, &FormOnline::configSaved, this,
+            [this](const OrgeoConfig& cfg){
+                if (m_orgeoService->saveConfig(cfg)) {
+                    ui_online->accept();     // успех — закрываем
+                } else {
+                    QMessageBox::warning(this, tr("Online"),
+                                         tr("Не удалось сохранить настройки Orgeo.\n"
+                                            "Подробности — в логе."));
+                    // окно остаётся открытым для повторной попытки
+                }
+            });
+
+    ui_online->show();
+    ui_online->raise();
+    ui_online->activateWindow();
+}
+
 void MainWindow::onConnectClicked() {
     if (!fl_connectedComport){
         settingsComport = ui_com_settings->settings();
@@ -1347,7 +1877,8 @@ void MainWindow::onCardRemoved() {
 }
 
 void MainWindow::onCardReadComplete(const SportIdent::CardData& cardData) {
-    m_resultProcessor->processCardData(cardData, this);
+    if(m_resultProcessor != nullptr)
+        m_resultProcessor->processCardData(cardData, this);
 }
 
 void MainWindow::onStationConnected(const SportIdent::StationInfo& info) {
@@ -1732,6 +2263,7 @@ void MainWindow::importCsvWithUndo(const QString& filePath)
         QTimer::singleShot(100, this, [this]() {
             // Потом обновляем все таблицы
             refreshAllTables();
+            populateResultFilters();
         });
     }
 }
@@ -1809,6 +2341,10 @@ void MainWindow::onDocumentOpened()
 {
     qDebug() << "Сигнал: документ открыт";
 
+    if (m_orgeoService) {
+        m_orgeoService->setDocument(m_document);
+    }
+
     // Даем время на завершение открытия БД
     QTimer::singleShot(150, this, [this]() {
         initializeForDocument();
@@ -1840,6 +2376,10 @@ void MainWindow::onDocumentClosed()
 {
     qDebug() << "\n=== ЗАКРЫТИЕ ДОКУМЕНТА ===";
 
+    if (m_orgeoService) {
+        m_orgeoService->setDocument(nullptr);
+    }
+
     // Отключаем все сигналы от моделей перед очисткой
     for (auto model : qAsConst(m_tableModels)) {
         if (model) {
@@ -1857,6 +2397,14 @@ void MainWindow::onDocumentClosed()
 
     // Очищаем модели
     clearModels();
+    {
+        QSignalBlocker b1(ui->cbFilterGroup);
+        QSignalBlocker b2(ui->cbFilterDistance);
+        QSignalBlocker b3(ui->cbFilterTeam);
+        ui->cbFilterGroup->clear();
+        ui->cbFilterDistance->clear();
+        ui->cbFilterTeam->clear();
+    }
 
     // Явно устанавливаем nullptr для всех таблиц
     ui->tablePerson->setModel(nullptr);
@@ -2040,6 +2588,7 @@ void MainWindow::on_act_undo_triggered()
     if (UndoStack::instance().canUndo()) {
         UndoStack::instance().undo();
         refreshAllTables(); // Обновляем все таблицы после undo
+        populateResultFilters();
         updateStatusBar();
     }
 }
@@ -2050,8 +2599,59 @@ void MainWindow::on_act_redo_triggered()
     if (UndoStack::instance().canRedo()) {
         UndoStack::instance().redo();
         refreshAllTables(); // Обновляем все таблицы после redo
+        populateResultFilters();
         updateStatusBar();
     }
+}
+
+void MainWindow::act_info_triggered()
+{
+    if (!m_document || !m_document->isOpen()) {
+        QMessageBox::warning(this, tr("Параметры соревнования"),
+                             tr("Сначала откройте или создайте соревнование."));
+        return;
+    }
+
+    const qint64 compId = m_document->competitionId();
+    if (compId <= 0) {
+        QMessageBox::warning(this, tr("Параметры соревнования"),
+                             tr("Не удалось определить текущее соревнование."));
+        return;
+    }
+
+    // Если диалог уже открыт — просто перечитать данные и поднять его
+    if (ui_info && ui_info->isVisible()) {
+        ui_info->loadCompetition(compId);
+        ui_info->raise();
+        ui_info->activateWindow();
+        return;
+    }
+
+    // Создаём НОВЫЙ экземпляр
+    FormInfo* dlg = new FormInfo(m_document, this);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    ui_info = dlg;
+
+    // КЛЮЧЕВОЕ: обнуляем указатель, когда Qt удалит диалог
+    connect(dlg, &QObject::destroyed, this, [this]() {
+        ui_info = nullptr;
+    });
+
+    connect(dlg, &FormInfo::dataSaved, this, [this, compId]() {
+        m_document->setCurrentCompetition(compId);  // перечитает name/date
+        updateWindowTitle();
+        updateStatusBar();
+    });
+
+    connect(dlg, &FormInfo::dataSavedError, this,
+            [this](const QString& err) {
+                QMessageBox::warning(this, tr("Ошибка сохранения"), err);
+            });
+
+    dlg->loadCompetition(compId);
+    dlg->show();
+    dlg->raise();
+    dlg->activateWindow();
 }
 
 void MainWindow::onAddRecord()
@@ -2225,6 +2825,8 @@ QDialog* MainWindow::createEditDialog(const QString& tableName, qint64 recordId)
         return createEditDialogDist(tableName,recordId);
     } else if (tableName == "age_groups") {
         return createEditDialogAge(tableName,recordId);
+    } else if (tableName == "results"){
+        return createEditDialogResult(tableName, recordId);
     }
 
     qWarning() << "No dialog for table:" << tableName;
@@ -2337,6 +2939,7 @@ QDialog* MainWindow::createEditDialogDelegation(const QString& tableName, qint64
                 // Обновляем отображение
                 refreshTable(table);
                 updateStatusBar();
+                populateResultFilters();
 
                 // Подсвечиваем добавленную делегацию
                 if (table == "delegations") {
@@ -2359,12 +2962,14 @@ QDialog* MainWindow::createEditDialogDelegation(const QString& tableName, qint64
                 refreshTable("results");       // В результатах тоже отображается делегация
 
                 updateStatusBar();
+                populateResultFilters();
             });
 
     connect(dialog, &DelegationEditDialog::recordDeleted,
             this, [this](qint64 id, const QString& table) {
                 refreshTable(table);
                 updateStatusBar();
+                populateResultFilters();
             });
 
     // Подключаем сигнал создания делегации
@@ -2382,6 +2987,8 @@ QDialog* MainWindow::createEditDialogDelegation(const QString& tableName, qint64
                 if (ui->tabWidget->currentIndex() == 4) {
                     ui->tableOrg->viewport()->update();
                 }
+
+                populateResultFilters();
             });
 
     return dialog;
@@ -2408,6 +3015,7 @@ QDialog* MainWindow::createEditDialogAge(const QString& tableName, qint64 record
                 // Обновляем отображение
                 refreshTable(table);
                 updateStatusBar();
+                populateResultFilters();
 
                 // Подсвечиваем добавленную группу
                 if (table == "age_groups") {
@@ -2424,6 +3032,7 @@ QDialog* MainWindow::createEditDialogAge(const QString& tableName, qint64 record
 
                 // Обновляем саму таблицу групп
                 refreshTable(table);
+                populateResultFilters();
 
                 // ОБНОВЛЯЕМ СВЯЗАННЫЕ ТАБЛИЦЫ
                 refreshTable("participants");  // У участников изменилась возрастная группа
@@ -2455,6 +3064,7 @@ QDialog* MainWindow::createEditDialogDist(const QString& tableName, qint64 recor
                 // Обновляем отображение
                 refreshTable(table);
                 updateStatusBar();
+                populateResultFilters();
 
                 // Подсвечиваем добавленную дистанцию
                 if (table == "distances") {
@@ -2477,6 +3087,7 @@ QDialog* MainWindow::createEditDialogDist(const QString& tableName, qint64 recor
                 refreshTable("results");       // В результатах тоже отображается дистанция
 
                 updateStatusBar();
+                populateResultFilters();
             });
 
     connect(dialog, &DistanceEditDialog::recordDeleted,
@@ -2500,9 +3111,66 @@ QDialog* MainWindow::createEditDialogDist(const QString& tableName, qint64 recor
                 if (ui->tabWidget->currentIndex() == 3) {
                     ui->tableDist->viewport()->update();
                 }
+
+                populateResultFilters();
             });
 
     return dialog;
+}
+
+QDialog* MainWindow::createEditDialogResult(const QString& tableName, qint64 recordId)
+{
+    // Новые результаты создаются считывателем SportIdent, не вручную
+    if (recordId <= 0) {
+        QMessageBox::information(this, tr("Результат"),
+                                 tr("Новые результаты добавляются считывателем чипов."));
+        return nullptr;
+    }
+
+    auto* dlg = new ResultEditDialog(m_document, recordId, this);
+
+    // --- Сохранение (и новое, и обновление) ---
+    connect(dlg, &ResultEditDialog::recordSaved,
+            this, [this](qint64 id, const QString& table) {
+                qDebug() << "Результат сохранён:" << table << "ID:" << id;
+                refreshTable(table);
+
+                // Пересчитать места — изменилось время/статус
+                if (m_proxyModels.contains("results")) {
+                    if (auto* p = qobject_cast<ResultsProxyModel*>(m_proxyModels["results"])) {
+                        p->recalculateRanks();
+                    }
+                }
+                updateStatusBar();
+                populateResultFilters();
+            });
+
+    connect(dlg, &ResultEditDialog::recordUpdated,
+            this, [this](qint64 id, const QString& table) {
+                qDebug() << "Результат обновлён:" << table << "ID:" << id;
+                refreshTable(table);
+                if (m_proxyModels.contains("results")) {
+                    if (auto* p = qobject_cast<ResultsProxyModel*>(m_proxyModels["results"])) {
+                        p->recalculateRanks();
+                    }
+                }
+                populateResultFilters();
+            });
+
+    connect(dlg, &ResultEditDialog::recordDeleted,
+            this, [this](qint64 id, const QString& table) {
+                qDebug() << "Результат удалён:" << table << "ID:" << id;
+                refreshTable(table);
+                if (m_proxyModels.contains("results")) {
+                    if (auto* p = qobject_cast<ResultsProxyModel*>(m_proxyModels["results"])) {
+                        p->recalculateRanks();
+                    }
+                }
+                updateStatusBar();
+                populateResultFilters();
+            });
+
+    return dlg;
 }
 
 void MainWindow::onEditRecord()
@@ -2692,9 +3360,17 @@ void MainWindow::updateWindowTitle()
 
 void MainWindow::on_act_Sync_triggered()
 {
-    QString str = QDateTime::currentDateTime().toString("!Tyyyy-MM-dd HH:mm:ss*"); // !T2025-06-12 10:46:00*
+    QString str = QDateTime::currentDateTime().toString("!Tyyyy-MM-dd HH:mm:ss.zzz*"); // !T2025-06-12 10:46:00*
+    ui_log_msg( "Begin " + str );
+
+    // m_siStation->setStationTimeTxt();
+    if (m_siStation->latencyEstimate() == 0) {
+        m_siStation->measureLatency(10);
+    }
     m_siStation->setStationTimeTxt();
-    ui_log_msg( str );
+
+    QString str2 = QDateTime::currentDateTime().toString("!Tyyyy-MM-dd HH:mm:ss.zzz*"); // !T2025-06-12 10:46:00*
+    ui_log_msg( "End " + str2 );
 }
 
 
@@ -2731,3 +3407,128 @@ void MainWindow::on_act_connect_printer_triggered(bool checked)
     ui->act_connect_printer->setChecked(m_flag_print);
 }
 
+void MainWindow::onResultFilterGroupChanged(int)
+{
+    if (!m_proxyModels.contains("results")) return;
+    auto* proxy = qobject_cast<ResultsProxyModel*>(m_proxyModels["results"]);
+    if (!proxy) return;
+    proxy->setFilterGroup(ui->cbFilterGroup->currentData().toString());
+    if (proxy->rowCount() == 0) {
+        statusBar()->showMessage(tr("Нет результатов по выбранному фильтру"), 3000);
+    }
+}
+
+void MainWindow::onResultFilterDistanceChanged(int)
+{
+    if (!m_proxyModels.contains("results")) return;
+    auto* proxy = qobject_cast<ResultsProxyModel*>(m_proxyModels["results"]);
+    if (!proxy) return;
+    proxy->setFilterDistance(ui->cbFilterDistance->currentData().toString());
+    if (proxy->rowCount() == 0) {
+        statusBar()->showMessage(tr("Нет результатов по выбранному фильтру"), 3000);
+    }
+}
+
+void MainWindow::onResultFilterTeamChanged(int)
+{
+    if (!m_proxyModels.contains("results")) return;
+    auto* proxy = qobject_cast<ResultsProxyModel*>(m_proxyModels["results"]);
+    if (!proxy) return;
+    proxy->setFilterTeam(ui->cbFilterTeam->currentData().toString());
+    if (proxy->rowCount() == 0) {
+        statusBar()->showMessage(tr("Нет результатов по выбранному фильтру"), 3000);
+    }
+}
+
+void MainWindow::onResultFilterResetClicked()
+{
+    if (!m_proxyModels.contains("results")) return;
+    auto* proxy = qobject_cast<ResultsProxyModel*>(m_proxyModels["results"]);
+    if (!proxy) return;
+
+    // Блокируем сигналы при программной смене индекса, чтобы не эмитить
+    // три раза подряд на сброс
+    {
+        QSignalBlocker b1(ui->cbFilterGroup);
+        QSignalBlocker b2(ui->cbFilterDistance);
+        QSignalBlocker b3(ui->cbFilterTeam);
+        ui->cbFilterGroup->setCurrentIndex(0);
+        ui->cbFilterDistance->setCurrentIndex(0);
+        ui->cbFilterTeam->setCurrentIndex(0);
+    }
+    proxy->clearFilters();
+}
+
+void MainWindow::populateResultFilters()
+{
+    if (!m_document || !m_document->isOpen()) return;
+    if (!ui->cbFilterGroup || !ui->cbFilterDistance || !ui->cbFilterTeam) return;
+
+    const qint64 compId = m_document->competitionId();
+    auto& db = DatabaseManager::instance();
+
+    // Сохраняем текущий выбор (значение data), чтобы не сбрасывать
+    // пользовательский фильтр при перезаполнении (например, после импорта)
+    const QString prevGroup    = ui->cbFilterGroup->currentData().toString();
+    const QString prevDistance = ui->cbFilterDistance->currentData().toString();
+    const QString prevTeam     = ui->cbFilterTeam->currentData().toString();
+
+    {
+        QSignalBlocker b1(ui->cbFilterGroup);
+        QSignalBlocker b2(ui->cbFilterDistance);
+        QSignalBlocker b3(ui->cbFilterTeam);
+
+        // --- Группы ---
+        ui->cbFilterGroup->clear();
+        ui->cbFilterGroup->addItem(tr("(все группы)"), QString());
+        {
+            QHash<QString, QVariant> p; p["competition_id"] = compId;
+            const auto rows = db.executeSelect(
+                "SELECT name FROM age_groups WHERE competition_id = :competition_id "
+                "AND name IS NOT NULL AND name <> '' ORDER BY name", p);
+            for (const auto& r : rows)
+                ui->cbFilterGroup->addItem(r["name"].toString(),
+                                           r["name"].toString());
+        }
+
+        // --- Дистанции ---
+        ui->cbFilterDistance->clear();
+        ui->cbFilterDistance->addItem(tr("(все дистанции)"), QString());
+        {
+            QHash<QString, QVariant> p; p["competition_id"] = compId;
+            const auto rows = db.executeSelect(
+                "SELECT name FROM distances WHERE competition_id = :competition_id "
+                "AND name IS NOT NULL AND name <> '' ORDER BY name", p);
+            for (const auto& r : rows)
+                ui->cbFilterDistance->addItem(r["name"].toString(),
+                                              r["name"].toString());
+        }
+
+        // --- Команды (делегации) ---
+        ui->cbFilterTeam->clear();
+        ui->cbFilterTeam->addItem(tr("(все команды)"), QString());
+        {
+            QHash<QString, QVariant> p; p["competition_id"] = compId;
+            const auto rows = db.executeSelect(
+                "SELECT name FROM delegations WHERE competition_id = :competition_id "
+                "AND name IS NOT NULL AND name <> '' ORDER BY name", p);
+            for (const auto& r : rows)
+                ui->cbFilterTeam->addItem(r["name"].toString(),
+                                          r["name"].toString());
+        }
+
+        // Восстанавливаем предыдущий выбор, если значение всё ещё доступно
+        auto restoreIndex = [](QComboBox* cb, const QString& value){
+            const int idx = cb->findData(value);
+            cb->setCurrentIndex(idx >= 0 ? idx : 0);
+        };
+        restoreIndex(ui->cbFilterGroup,    prevGroup);
+        restoreIndex(ui->cbFilterDistance, prevDistance);
+        restoreIndex(ui->cbFilterTeam,     prevTeam);
+    }
+
+    // После восстановления выбор мог измениться — синхронизируем прокси
+    onResultFilterGroupChanged(ui->cbFilterGroup->currentIndex());
+    onResultFilterDistanceChanged(ui->cbFilterDistance->currentIndex());
+    onResultFilterTeamChanged(ui->cbFilterTeam->currentIndex());
+}
