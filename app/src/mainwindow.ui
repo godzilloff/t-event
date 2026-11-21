@@ -18,7 +18,7 @@
     <item row="0" column="0">
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <property name="iconSize">
        <size>
@@ -40,9 +40,82 @@
        <attribute name="title">
         <string>Результаты</string>
        </attribute>
-       <layout class="QGridLayout" name="gridLayout_4">
-        <item row="0" column="0">
+       <layout class="QVBoxLayout" name="vlayoutResultTab">
+        <item>
+         <layout class="QHBoxLayout" name="hlayoutResultFilters">
+          <item>
+           <widget class="QLabel" name="lbFilterGroup">
+            <property name="text">
+             <string>Группа:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="cbFilterGroup">
+            <property name="sizeAdjustPolicy">
+             <enum>QComboBox::AdjustToContents</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="lbFilterDistance">
+            <property name="text">
+             <string>Дистанция:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="cbFilterDistance">
+            <property name="sizeAdjustPolicy">
+             <enum>QComboBox::AdjustToContents</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="lbFilterTeam">
+            <property name="text">
+             <string>Команда:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="cbFilterTeam">
+            <property name="sizeAdjustPolicy">
+             <enum>QComboBox::AdjustToContents</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QToolButton" name="btnFilterReset">
+            <property name="toolTip">
+             <string>Сбросить все фильтры результатов</string>
+            </property>
+            <property name="text">
+             <string>Сбросить</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="spacerResultFilters">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </item>
+        <item>
          <widget class="QTableView" name="tableResult">
+          <property name="toolTip">
+           <string>Ctrl+K — отправить выделенный результат на Orgeo
+Ctrl+P — печать выделенного результата</string>
+          </property>
           <property name="selectionBehavior">
            <enum>QAbstractItemView::SelectRows</enum>
           </property>
@@ -107,7 +180,7 @@
      <x>0</x>
      <y>0</y>
      <width>1017</width>
-     <height>21</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu">
@@ -178,6 +251,18 @@
     <property name="title">
      <string>Сервис</string>
     </property>
+    <widget class="QMenu" name="menuOrgeo">
+     <property name="title">
+      <string>Orgeo</string>
+     </property>
+     <addaction name="act_online"/>
+     <addaction name="separator"/>
+     <addaction name="act_send_clear_all"/>
+     <addaction name="separator"/>
+     <addaction name="act_send_start_list"/>
+     <addaction name="act_send_all_results"/>
+    </widget>
+    <addaction name="menuOrgeo"/>
    </widget>
    <widget class="QMenu" name="menu_8">
     <property name="title">
@@ -189,7 +274,6 @@
     <addaction name="separator"/>
     <addaction name="act_Sync"/>
     <addaction name="separator"/>
-    <addaction name="act_online"/>
    </widget>
    <widget class="QMenu" name="menu_9">
     <property name="title">
@@ -414,7 +498,7 @@
   </action>
   <action name="act_online">
    <property name="text">
-    <string>Online</string>
+    <string>Настройки</string>
    </property>
   </action>
   <action name="act_preparation">
@@ -488,6 +572,24 @@
    </property>
    <property name="toolTip">
     <string>Подключить принтер</string>
+   </property>
+  </action>
+  <action name="act_send_clear_all">
+   <property name="text">
+    <string>Очистить данные на Orgeo</string>
+   </property>
+   <property name="toolTip">
+    <string>Полностью стереть стартовый протокол, результаты и сплиты на Orgeo для текущего дня</string>
+   </property>
+  </action>
+  <action name="act_send_start_list">
+   <property name="text">
+    <string>Отправить стартовый протокол</string>
+   </property>
+  </action>
+  <action name="act_send_all_results">
+   <property name="text">
+    <string>Отправить все результаты</string>
    </property>
   </action>
  </widget>
