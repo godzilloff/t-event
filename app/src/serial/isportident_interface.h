@@ -24,6 +24,10 @@ public:
     // Основные операции
     virtual void acknowledgeCard() = 0;
 
+    virtual qint64 latencyEstimate() const = 0;
+    virtual void measureLatency(int samples = 10) = 0;
+    virtual bool waitForTextReply(QByteArray& out, int timeoutMs = 500) = 0;
+
     // Управление станцией
     virtual void setStationTimeTxt() = 0;
     virtual void beep(int count = 1) = 0;
@@ -49,6 +53,7 @@ signals:
     void debugMessage(const QString& message);
     void rawDataReceived(const QByteArray& data);
     void rawDataSent(const QByteArray& data);
+    void radioPunchReceived(const SportIdent::RadioPunch& punch);
 };
 
 } // namespace SportIdent

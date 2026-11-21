@@ -29,6 +29,9 @@ public:
     // Основные операции
     void acknowledgeCard() override;
 
+    void measureLatency(int samples = 10) override;
+    qint64 latencyEstimate() const override { return m_latency_est_ms; };
+    bool waitForTextReply(QByteArray& out, int timeoutMs) override;
 
     QByteArray prepareTimeData();
     qint64 calculateWaitToNextSecond();
@@ -101,6 +104,9 @@ private:
     void handleCardDetection(const QByteArray& data);
     void handleCardRemoval();
 
+    void processTextLine(const QByteArray& line);
+    static bool isEspLog(const QByteArray& line);
+
     // Проверка и парсинг фреймов
     QByteArray parseFrame(const QByteArray& rawData);
 
@@ -115,10 +121,12 @@ private:
 
     // Состояние
     QScopedPointer<QSerialPort> m_serialPort;
+    qint64 m_latency_est_ms = 0;
 
     // Буферы данных
     QByteArray m_readBuffer;
     QQueue<CommandFrame> m_commandQueue;
+    QQueue<QByteArray> m_textReplyQueue;
 
     // Текущее состояние
     bool m_connected;

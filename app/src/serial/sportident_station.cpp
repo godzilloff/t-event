@@ -8,6 +8,7 @@
 #include <QElapsedTimer>
 #include <QMutexLocker>
 #include <QMessageBox>
+#include <algorithm>
 
 #include "sportident_crc.h"
 #include "sportident_decoder.h"
@@ -215,114 +216,144 @@ void SportIdentStation::disconnectToStation() {
 }
 
 void SportIdentStation::onReadyRead() {
-    if (!m_serialPort || !m_serialPort->isOpen()) {
-        emit debugMessage(tr("onReadyRead: port not open"));
-        return;
-    }
+    if (!m_serialPort || !m_serialPort->isOpen()) return;
 
-    qint64 bytesAvailable = m_serialPort->bytesAvailable();
-
-    if (bytesAvailable == 0) { return; }
-
-    // Читаем все доступные данные
     QByteArray newData = m_serialPort->readAll();
-
-    if (newData.isEmpty()) {
-        emit debugMessage(tr("onReadyRead: no data read"));
-        return;
-    }
+    if (newData.isEmpty()) return;
 
     m_readBuffer.append(newData);
 
-    // Обработка накопленных данных
+    // 1. Извлекаем ВСЕ полные текстовые строки
+    while (!m_readBuffer.isEmpty()) {
+        uint8_t first = static_cast<uint8_t>(m_readBuffer[0]);
+
+        // Начался бинарный фрейм — прерываем текстовый разбор
+        if (first == Constants::STX || first == Constants::WAKEUP) break;
+
+        int lf = m_readBuffer.indexOf('\n');
+        if (lf < 0) break;   // строкa ещё не завершена — ждём
+
+        QByteArray line = m_readBuffer.left(lf);
+        m_readBuffer.remove(0, lf + 1);
+
+        if (line.endsWith('\r')) line.chop(1);
+
+        processTextLine(line);
+
+        // m_textReplyQueue.enqueue(line);
+        // emit debugMessage(tr("Text reply: %1").arg(QString::fromUtf8(line)));
+    }
+
+    // 2. Разбираем бинарные SI-фреймы (текстовые остатки остаются в буфере)
     processIncomingData();
 }
 
-void SportIdentStation::processIncomingData() {
-    // emit debugMessage(tr("processIncomingData: buffer size = %1").arg(m_readBuffer.size()));
+void SportIdentStation::processTextLine(const QByteArray& line)
+{
+    // 1. Команда !R — радио-отметка
+    // Формат: !R<cardNum>,<stNum>,<unix_sec>,<millis>*
+    if (line.startsWith("!R") && line.endsWith('*')) {
+        QByteArray body = line.mid(2, line.size() - 3);   // без "!R" и "*"
+        const QList<QByteArray> parts = body.split(',');
 
+        if (parts.size() != 4) {
+            emit debugMessage(tr("Radio punch: bad field count: %1")
+                                  .arg(QString::fromUtf8(line)));
+            return;
+        }
+
+        bool ok1, ok2, ok3, ok4;
+        RadioPunch punch;
+        punch.cardNumber  = parts[0].toUInt(&ok1);
+        punch.stationCode = parts[1].toUShort(&ok2);
+        const uint32_t unixSec = parts[2].toUInt(&ok3);
+        const uint16_t ms      = parts[3].toUShort(&ok4);
+
+        if (!(ok1 && ok2 && ok3 && ok4)) {
+            emit debugMessage(tr("Radio punch: parse error: %1")
+                                  .arg(QString::fromUtf8(line)));
+            return;
+        }
+
+        punch.timestamp = QDateTime::fromSecsSinceEpoch(unixSec, Qt::LocalTime)
+                              .addMSecs(ms);
+
+        emit debugMessage(tr("Radio punch: card=%1, CP=%2, %3")
+                              .arg(punch.cardNumber)
+                              .arg(punch.stationCode)
+                              .arg(punch.timestamp.toString("hh:mm:ss.zzz")));
+        emit radioPunchReceived(punch);
+        return;
+    }
+
+    // 2. Логи ESP-IDF — отфильтровать, чтобы не мусорили в m_textReplyQueue
+    // Формат: "I (12345) TAG: message", "E (...)", "W (...)", ...
+    if (isEspLog(line)) {
+        // Опционально: можно показывать в отдельной панели GUI,
+        // а не в общем debugMessage. Пока — просто отбрасываем.
+        return;
+    }
+
+    // 3. Всё остальное (ответы на ?T*, ?V*, ?M* и т.п.) — в очередь
+    m_textReplyQueue.enqueue(line);
+    emit debugMessage(tr("Text reply: %1").arg(QString::fromUtf8(line)));
+}
+
+
+bool SportIdentStation::isEspLog(const QByteArray& line)
+{
+    // Логи ESP-IDF: <level> (<timestamp>) <tag>: <message>
+    // Пример: "I (156185) rc522: ...", "E (1698459) RFID: ..."
+    if (line.size() < 4) return false;
+    const char lvl = line.at(0);
+    if (lvl != 'E' && lvl != 'W' && lvl != 'I' && lvl != 'D' && lvl != 'V') return false;
+    if (line.at(1) != ' ') return false;
+    if (line.at(2) != '(') return false;
+    return true;
+}
+
+void SportIdentStation::processIncomingData() {
     while (m_readBuffer.size() > 0) {
-        // Проверяем, не начинается ли с WAKEUP (0xFF)
-        if (static_cast<uint8_t>(m_readBuffer[0]) == Constants::WAKEUP) {
-            // emit debugMessage(tr("processIncomingData: discarding WAKEUP byte"));
+        uint8_t first = static_cast<uint8_t>(m_readBuffer[0]);
+
+        // WAKEUP — пропускаем
+        if (first == Constants::WAKEUP) {
             m_readBuffer.remove(0, 1);
             continue;
         }
 
-        // Ищем STX
-        int stxPos = m_readBuffer.indexOf(Constants::STX);
-        if (stxPos < 0) {
-            // emit debugMessage(tr("processIncomingData: no STX found, clearing buffer"));
-            m_readBuffer.clear();
-            break;
+        // Если не STX — это НЕ SI-фрейм. Оставляем для текстового цикла.
+        if (first != Constants::STX) {
+            break;   // ← было: indexOf(STX) + clear()
         }
 
-        // Удаляем мусор до STX
-        if (stxPos > 0) {
-            // QString discarded = m_readBuffer.left(stxPos).toHex(' ').toUpper();
-            // emit debugMessage(tr("processIncomingData: discarding %1 bytes before STX: %2").arg(stxPos).arg(discarded));
-            m_readBuffer.remove(0, stxPos);
-        }
-
-        // Нужен хотя бы STX + command
-        if (m_readBuffer.size() < 2) {
-            // emit debugMessage(tr("processIncomingData: not enough data for command"));
-            break;
-        }
+        // Дальше — существующая логика разбора SI-фрейма
+        if (m_readBuffer.size() < 2) break;
 
         uint8_t command = static_cast<uint8_t>(m_readBuffer[1]);
-        // emit debugMessage(tr("processIncomingData: command = 0x%1").arg(command, 2, 16, QChar('0')));
 
-        // Определяем длину фрейма
         int frameLength = 0;
-
         if (m_legacyProtocol && command < 0x80) {
-            // Старый протокол: ищем ETX
             int etxPos = m_readBuffer.indexOf(Constants::ETX, 1);
-            if (etxPos < 0) {
-                // emit debugMessage(tr("processIncomingData: no ETX found, waiting"));
-                break;
-            }
+            if (etxPos < 0) break;
             frameLength = etxPos + 1;
         } else {
-            // Новый протокол: проверяем длину
-            if (m_readBuffer.size() < 3) {
-                // emit debugMessage(tr("processIncomingData: not enough data for length byte"));
-                break;
-            }
-
+            if (m_readBuffer.size() < 3) break;
             uint8_t length = static_cast<uint8_t>(m_readBuffer[2]);
-            frameLength = 1 + 1 + 1 + length + 2 + 1; // STX + cmd + len + data + CRC + ETX
-
-            if (m_readBuffer.size() < frameLength) {
-                // emit debugMessage(tr("processIncomingData: waiting for more data, need %1, have %2").arg(frameLength).arg(m_readBuffer.size()));
-                break;
-            }
+            frameLength = 1 + 1 + 1 + length + 2 + 1;
+            if (m_readBuffer.size() < frameLength) break;
         }
 
-        // Извлекаем полный фрейм
         QByteArray frame = m_readBuffer.left(frameLength);
-        // QString frameHex = frame.toHex(' ').toUpper();
-        // emit debugMessage(tr("processIncomingData: extracted frame (%1 bytes): %2").arg(frameLength).arg(frameHex));
+        m_readBuffer.remove(0, frameLength);
 
         try {
-            // Обработка фрейма
             QByteArray parsedData = parseFrame(frame);
             if (!parsedData.isEmpty()) {
                 handleFrame(command, parsedData);
             }
-
-            // Удаляем обработанный фрейм из буфера
-            m_readBuffer.remove(0, frameLength);
-            // emit debugMessage(tr("processIncomingData: frame processed, buffer size = %1").arg(m_readBuffer.size()));
-
         } catch (const std::exception& e) {
-            QString error = tr("Error processing frame: %1").arg(e.what());
-            emit errorOccurred(error);
-            emit debugMessage(error);
-
-            // Пропускаем этот байт и пробуем снова
-            m_readBuffer.remove(0, 1);
+            emit errorOccurred(tr("Error processing frame: %1").arg(e.what()));
         }
     }
 }
@@ -473,6 +504,67 @@ void SportIdentStation::acknowledgeCard() {
     m_cardManager->sendAcknowledge();
 }
 
+void SportIdentStation::measureLatency(int samples) {
+    if (!isConnectedToStation()) {
+        emit debugMessage("measureLatency: not connected");
+        return;
+    }
+
+    QVector<qint64> rts;
+    rts.reserve(samples);
+
+    // Очистим возможный мусор
+    m_textReplyQueue.clear();
+
+    for (int i = 0; i < samples; i++) {
+        QElapsedTimer t;
+        t.start();
+
+        if (!sendRawData("?T*\r")) break;
+
+        QByteArray reply;
+        if (!waitForTextReply(reply, 500)) {
+            emit debugMessage(tr("Latency sample %1: timeout").arg(i));
+            continue;
+        }
+
+        qint64 rt = t.elapsed();
+        if (rt > 0 && rt < 500) {
+            rts.append(rt);
+        }
+        QThread::msleep(30);   // пауза между замерами
+    }
+
+    if (rts.isEmpty()) {
+        emit debugMessage("Latency measurement failed: no valid samples");
+        return;
+    }
+
+    // Медиана — устойчивее среднего к выбросам USB-UART
+    std::sort(rts.begin(), rts.end());
+    qint64 median_rt = rts[rts.size() / 2];
+    m_latency_est_ms = median_rt / 2;
+
+    emit debugMessage(QString("Latency: RT median = %1 ms, L_up ≈ %2 ms (n=%3)")
+                          .arg(median_rt).arg(m_latency_est_ms).arg(rts.size()));
+}
+
+bool SportIdentStation::waitForTextReply(QByteArray& out, int timeoutMs) {
+    QElapsedTimer t;
+    t.start();
+
+    while (t.elapsed() < timeoutMs) {
+        if (!m_textReplyQueue.isEmpty()) {
+            out = m_textReplyQueue.dequeue();
+            return true;
+        }
+        // Крутим event loop, чтобы readyRead успел сработать
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 5);
+        QThread::msleep(1);
+    }
+    return false;
+}
+
 // Слоты для менеджера чтения карт
 void SportIdentStation::onRequestBlock(uint8_t blockNumber) {
     try {
@@ -593,15 +685,20 @@ void SportIdentStation::waitAndExecute(std::function<void(const QByteArray&)> ca
     callback(data);
 }
 
-void SportIdentStation::setStationTimeTxt(){
-    QString str = QDateTime::currentDateTime().toString("!Tyyyy-MM-dd HH:mm:ss*"); // !T2025-06-12 10:46:00*
-    QByteArray data = str.toUtf8() + "\r";
-    // sendRawData(data);
+void SportIdentStation::setStationTimeTxt() {
+    // Компенсируем одностороннюю задержку
+    QDateTime target = QDateTime::currentDateTime()
+                           .addMSecs(m_latency_est_ms);
 
-    SportIdentStation::waitAndExecute([this](const QByteArray& data) {
-        sendRawData(data);
-        qDebug() << "Executed at precise time:" << data;
-    });
+    QString str = target.toString("!Tyyyy-MM-dd HH:mm:ss.zzz*");
+    QByteArray data = str.toUtf8() + "\r";
+
+    if (!sendRawData(data)) {
+        emit errorOccurred("Failed to send set-time command");
+        return;
+    }
+    emit debugMessage(QString("!T sent: %1 (comp +%2 ms)")
+                          .arg(str).arg(m_latency_est_ms));
 }
 
 void SportIdentStation::beep(int count) {

@@ -70,6 +70,12 @@ struct Punch {
     uint8_t subsecond = 0;   // Доля секунды (1/256)
 };
 
+struct RadioPunch {
+    uint32_t cardNumber  = 0;
+    uint16_t stationCode = 0;   // код КП
+    QDateTime timestamp;        // локальное время
+};
+
 // Данные карты
 struct CardData {
     uint32_t cardNumber = 0;          // Номер карты
@@ -145,5 +151,7 @@ struct StationInfo {
 };
 
 } // namespace SportIdent
+
+Q_DECLARE_METATYPE(SportIdent::RadioPunch)
 
 #endif // SPORTIDENT_TYPES_H
