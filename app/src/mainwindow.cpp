@@ -458,11 +458,6 @@ void MainWindow::initializeForDocument()
                 // Пересчитываем ранги
                 resultsProxy->recalculateRanks();
 
-                // Явно показываем все колонки в tableView
-                for (int i = 0; i < resultsProxy->columnCount(); ++i) {
-                    ui->tableResult->setColumnHidden(i, false);
-                }
-
                 ui->tableResult->setSortingEnabled(false);
 
                 // Принудительно обновляем представление
@@ -486,12 +481,6 @@ void MainWindow::initializeForDocument()
 
             // Пересчитываем ранги
             resultsProxy->recalculateRanks();
-
-            // ВАЖНО: ЯВНО ПОКАЗЫВАЕМ ВСЕ КОЛОНКИ
-            for (int i = 0; i < resultsProxy->columnCount(); ++i) {
-                ui->tableResult->setColumnHidden(i, false);
-                qDebug() << "  Column" << i << "hidden:" << ui->tableResult->isColumnHidden(i);
-            }
 
             // Принудительно обновляем представление
             ui->tableResult->reset();
@@ -712,7 +701,7 @@ void MainWindow::onPrintResult()
         return;
     }
 
-    AbstractProxyModel* proxyModel = m_proxyModels["results"];
+    const AbstractProxyModel* proxyModel = m_proxyModels["results"];
 
     // Получаем ID результата из прокси-модели
     qint64 resultId = proxyModel->recordId(selectedIndex);
@@ -1012,7 +1001,6 @@ void MainWindow::setupModels()
 
             proxy = resultsProxy;
 
-            //resultsProxy->setObjectName("ResultsProxy");
             resultsProxy->setObjectName("ResultsProxy_" + tableName); // ВАЖНО!
             qDebug() << "  ResultsProxyModel created, columnCount:" << resultsProxy->columnCount();
 
@@ -1047,16 +1035,13 @@ void MainWindow::setupModels()
     QHeaderView* header = ui->tableResult->horizontalHeader();
     header->setSectionsClickable(true);
     header->setSortIndicatorShown(true);  // Показывать индикатор сортировки
-    header->setSortIndicator(-1, Qt::AscendingOrder);  // Сброс индикатора
-
-    // Установка политики сортировки
-    ui->tableResult->setSortingEnabled(true);
+    header->setSortIndicator(0, Qt::AscendingOrder);  // Сброс индикатора
 }
 
 void MainWindow::setupColumnHeaders(SqlTableModel* model, const QString& tableName)
 {
     // Сначала получаем структуру модели
-    model->select(); // Это нужно чтобы columnCount() работал правильно
+    model->record(); // Это нужно чтобы columnCount() работал правильно
 
     QMap<int, QString> headers;
 
@@ -1124,17 +1109,18 @@ void MainWindow::setupColumnHeaders(SqlTableModel* model, const QString& tableNa
         headers = {
             {0, "ID"},
             {1, "ФИО участника"},      // из participants
-            {2, "Возрастная группа"},    // из age_groups
+            {2, "Группа"},    // из age_groups
             {3, "Делегация"},           // из delegations через participants
-            {4, "Результат (сек)"},
+            {4, "Результат"},
             {5, "Статус"},
-            {6, "Номер (bib)"},        // из participants
-            {7, "Номер чипа"},
-            {8, "Время старта"},
-            {9, "Время финиша"},
+            {6, "Номер"},        // из participants
+            {7, "Чип"},
+            {8, "Старт"},
+            {9, "Финиш"},
             {10, "Пол"},                 // из participants
             {11, "ID участника"},
-            {12, "Дистанция"}           // из distances
+            {12, "Дистанция"},           // из distances
+            {13, "reserv"}
         };
     }
 
@@ -1261,20 +1247,6 @@ void MainWindow::setupColumnVisibility()
             // Просто пропускаем эту таблицу
             qDebug() << "  Пропускаю participants - колонки скрыты через QTableView";
             continue;  // <-- ВАЖНО: пропускаем установку видимости через прокси
-
-            // visibleColumns = {
-            //     3,  // full_name
-            //     5,  // bib_number
-            //     6,  // chip_number
-            //     9,  // gender
-            //     8,  // birth_date
-            //     11, // delegation_name
-            //     12, // distance_name
-            //     13  // age_group_name
-            // };
-
-            // ui->tablePerson->setColumnHidden(1, true);
-            // ui->tablePerson->setColumnHidden(2, true);
         }
         else if (tableName == "delegations") {
             visibleColumns = {2, 3, 4}; // name, representative, contact
@@ -1285,9 +1257,8 @@ void MainWindow::setupColumnVisibility()
         else if (tableName == "age_groups") {
             visibleColumns = {2, 3, 4, 5}; // name, min_age, max_age, price
         }
-        else if (tableName == "results") {
-
-
+        else if (tableName == "results")
+        {
             auto* proxy = m_proxyModels["results"];
 
             int totalCols = proxy->columnCount();
@@ -1320,18 +1291,13 @@ void MainWindow::setupColumnVisibility()
                 visibleColumns.append(sourceColCount + 2); // % от лидера
             }
 
-            qDebug() << "  Results - total columns with virtual:" << visibleColumns;
-
-
+            ui->tableResult->setColumnHidden(0, true); // ID
             // Виртуальные колонки управляются напрямую в QTableView
             ui->tableResult->setColumnHidden(13, false); // Место
             ui->tableResult->setColumnHidden(14, false); // Отставание
             ui->tableResult->setColumnHidden(15, false); // % от лидера
 
-
-            proxy->setVisibleColumns(visibleColumns);
-
-            // qDebug() << "  Results - visible columns:" << visibleColumns;
+            visibleColumns.clear();
         }
 
         if (!visibleColumns.isEmpty()) {
@@ -1737,7 +1703,7 @@ void MainWindow::on_act_send_clear_all_triggered()
                        "Это действие необратимо. Продолжить?")
                         .arg(cfg.liveUrl));
 
-        QPushButton* btnYes = box.addButton(tr("Да, удалить"), QMessageBox::YesRole);
+        const QPushButton* btnYes = box.addButton(tr("Да, удалить"), QMessageBox::YesRole);
         QPushButton* btnNo  = box.addButton(tr("Нет"),          QMessageBox::NoRole);
 
         box.setDefaultButton(btnNo);   // безопасный дефолт — «Нет»
@@ -1940,6 +1906,11 @@ void MainWindow::connectModelsToWidgets()
         ui->tablePerson->setColumnHidden(1, true);
         ui->tablePerson->setColumnHidden(2, true);
         // qDebug() << "Столбцы 1 и 2 скрыты в connectModelsToWidgets";
+
+        // Скрываем 5 технических колонок в конце (14-18)
+        for (int i = 14; i <= 18; ++i) {
+            ui->tablePerson->setColumnHidden(i, true);
+        }
     }
 
     if (m_proxyModels.contains("age_groups")) {
@@ -1955,6 +1926,8 @@ void MainWindow::connectModelsToWidgets()
     // Results подключаем сразу, без задержки
     if (m_proxyModels.contains("results")) {
         ui->tableResult->setModel(m_proxyModels["results"]);
+        ui->tableResult->setColumnHidden(0,  true);   // ID результата
+        ui->tableResult->setColumnHidden(11, true);   // 0
     }
 
     // Подгоняем столбцы после установки моделей
@@ -2344,31 +2317,7 @@ void MainWindow::onDocumentOpened()
         m_orgeoService->setDocument(m_document);
     }
 
-    // Даем время на завершение открытия БД
-    QTimer::singleShot(150, this, [this]() {
-        initializeForDocument();
-    });
-
-    QTimer::singleShot(500, this, [this]() {
-        qDebug() << "=== ПРИНУДИТЕЛЬНОЕ ОБНОВЛЕНИЕ ТАБЛИЦЫ РЕЗУЛЬТАТОВ ===";
-
-        // Перезапрашиваем данные для всех видимых ячеек
-        QAbstractItemModel* model = ui->tableResult->model();
-        if (model) {
-            QModelIndex tl = model->index(0, 13);
-            QModelIndex br = model->index(model->rowCount() - 1, 15);
-            QMetaObject::invokeMethod(
-                model,
-                "dataChanged",
-                Qt::QueuedConnection,
-                Q_ARG(QModelIndex, tl),
-                Q_ARG(QModelIndex, br)
-                );
-        }
-
-        // Принудительная перерисовка
-        ui->tableResult->viewport()->update();
-    });
+    initializeForDocument();
 }
 
 void MainWindow::onDocumentClosed()
@@ -2465,14 +2414,6 @@ void MainWindow::onNewDocument()
 
         if (m_document->createNew(filePath)) {
             adjustForCurrentFile(filePath);
-
-            QTimer::singleShot(100, this, [this]() {
-                initializeForDocument();
-
-                QTimer::singleShot(50, this, [this]() {
-                    refreshAllTables();
-                });
-            });
         } else {
             QMessageBox::critical(this, tr("Ошибка"),
                                   tr("Не удалось создать файл: %1").arg(filePath));
@@ -2499,11 +2440,6 @@ void MainWindow::OpenTEvent(QString fpath)
 
     if (m_document->open(fpath)) {
         adjustForCurrentFile(fpath);
-
-        // ДОБАВЛЕНО: ждем пока документ полностью откроется
-        QTimer::singleShot(100, this, [this]() {
-            initializeForDocument();
-        });
     } else {
         QMessageBox::critical(this, tr("Ошибка"),
                               tr("Не удалось открыть файл: %1").arg(fpath));
