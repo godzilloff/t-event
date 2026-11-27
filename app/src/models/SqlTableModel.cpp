@@ -426,16 +426,16 @@ bool FilterProxyModel::filterAcceptsColumn(int sourceColumn, const QModelIndex& 
     Q_UNUSED(sourceParent);
 
     // Важно: проверяем, для какой модели вызывается фильтр
-    QString caller = objectName();
+    // QString caller = objectName();
 
     // Для отладки покажем первые вызовы для каждой модели
-    static QSet<QString> loggedModels;
-    if (!loggedModels.contains(caller) && !caller.isEmpty()) {
-        loggedModels.insert(caller);
-        qDebug() << "FilterProxyModel::filterAcceptsColumn для" << caller
-                 << "sourceColumn:" << sourceColumn
-                 << "m_visibleColumns:" << m_visibleColumns;
-    }
+    // static QSet<QString> loggedModels;
+    // if (!loggedModels.contains(caller) && !caller.isEmpty()) {
+    //     loggedModels.insert(caller);
+    //     qDebug() << "FilterProxyModel::filterAcceptsColumn для" << caller
+    //              << "sourceColumn:" << sourceColumn
+    //              << "m_visibleColumns:" << m_visibleColumns;
+    // }
 
     // Если список видимых колонок пуст, показываем все
     if (m_visibleColumns.isEmpty()) {
@@ -446,10 +446,10 @@ bool FilterProxyModel::filterAcceptsColumn(int sourceColumn, const QModelIndex& 
     bool visible = m_visibleColumns.contains(sourceColumn);
 
     // Для отладки покажем только rejection для виртуальных колонок results
-    if (!visible && sourceColumn >= 13 && caller.contains("Results")) {
-        qDebug() << "  ВНИМАНИЕ: виртуальная колонка" << sourceColumn
-                 << "скрыта для" << caller;
-    }
+    // if (!visible && sourceColumn >= 13 && caller.contains("Results")) {
+    //     qDebug() << "  ВНИМАНИЕ: виртуальная колонка" << sourceColumn
+    //              << "скрыта для" << caller;
+    // }
 
     return visible;
 }

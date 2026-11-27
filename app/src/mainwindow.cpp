@@ -314,7 +314,7 @@ void MainWindow::keyPressEvent(QKeyEvent *e)
             e->accept();
             return;
         }
-        AbstractProxyModel* proxy = m_proxyModels["results"];
+        const AbstractProxyModel* proxy = m_proxyModels["results"];
 
         const QModelIndexList selected =
             tableResult->selectionModel()
@@ -1759,11 +1759,10 @@ void MainWindow::on_act_send_clear_all_triggered()
                        "«Нет»    — только очистить (протокол залить позже вручную);\n"
                        "«Отмена» — НЕ очищать сайт, действие полностью отменяется."));
 
-        QPushButton const *btnYes    = box.addButton(tr("Да, очистить и залить протокол"),
-                                            QMessageBox::YesRole);
-        QPushButton *btnCancel = box.addButton(tr("Отмена"),
-                                               QMessageBox::RejectRole);
-        box.addButton(tr("Нет, только очистить"),QMessageBox::NoRole);
+        auto* btnYes    = box.addButton(tr("Да, очистить и залить протокол"), QMessageBox::YesRole);
+        auto* btnOnly   = box.addButton(tr("Только очистить"), QMessageBox::NoRole);
+        auto* btnCancel = box.addButton(tr("Отмена"), QMessageBox::RejectRole);
+        Q_UNUSED(btnOnly);
 
         box.setDefaultButton(btnCancel);   // безопасный дефолт — «Отмена»
         box.setEscapeButton(btnCancel);    // Esc == «Отмена»
@@ -3264,7 +3263,7 @@ void MainWindow::onDeleteRecord()
 
     // Используем метод recordId() из прокси-модели
     // FilterProxyModel* proxyModel = m_proxyModels[m_currentTable];
-    AbstractProxyModel* proxyModel = m_proxyModels[m_currentTable];
+    const AbstractProxyModel* proxyModel = m_proxyModels[m_currentTable];
     if (!proxyModel) {
         return;
     }

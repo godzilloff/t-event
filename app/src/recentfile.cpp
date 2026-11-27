@@ -6,9 +6,10 @@
 
 
 void MainWindow::createActionsAndConnections(){
-    QAction* recentFileAction = 0;
+    recentFileActionList.reserve(maxFileNr);
+
     for(auto i = 0; i < maxFileNr; ++i){
-        recentFileAction = new QAction(this);
+        QAction* recentFileAction = new QAction(this);
         recentFileAction->setVisible(false);
         QObject::connect(recentFileAction, &QAction::triggered,
                          this, &MainWindow::openRecent);

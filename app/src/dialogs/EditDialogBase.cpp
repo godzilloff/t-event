@@ -121,7 +121,6 @@ bool EditDialogBase::performSave()
     }
 
     bool success = false;
-    bool wasNewRecord = isNewRecord();
 
     if (isNewRecord()) {
         qint64 newId = m_document->insertRecord(m_tableName, formData);

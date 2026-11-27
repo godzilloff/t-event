@@ -40,42 +40,42 @@ SettingsDialog::~SettingsDialog()
 }
 
 void SettingsDialog::loadSettingsFromIni(){
-    QSettings settings("set.ini", QSettings::IniFormat);
-    settings.beginGroup("comport");
+    QSettings ini("set.ini", QSettings::IniFormat);
+    ini.beginGroup("comport");
 
-    m_currentSettings.name = settings.value("name", QByteArray()).toString();
-    m_currentSettings.baudRate = settings.value("baudRate", QByteArray()).toInt();
-    m_currentSettings.stringBaudRate = settings.value("stringBaudRate", QByteArray()).toString();
+    m_currentSettings.name = ini.value("name", QByteArray()).toString();
+    m_currentSettings.baudRate = ini.value("baudRate", 38400).toInt();
+    m_currentSettings.stringBaudRate = ini.value("stringBaudRate", QByteArray()).toString();
     m_currentSettings.dataBits = QSerialPort::Data8;
-    m_currentSettings.stringDataBits = settings.value("stringDataBits", QByteArray()).toString();
+    m_currentSettings.stringDataBits = ini.value("stringDataBits", QByteArray()).toString();
     m_currentSettings.parity = QSerialPort::NoParity;
-    m_currentSettings.stringParity = settings.value("stringParity", QByteArray()).toString();
+    m_currentSettings.stringParity = ini.value("stringParity", QByteArray()).toString();
     m_currentSettings.stopBits = QSerialPort::OneStop;
-    m_currentSettings.stringStopBits = settings.value("stringStopBits", QByteArray()).toString();
+    m_currentSettings.stringStopBits = ini.value("stringStopBits", QByteArray()).toString();
     m_currentSettings.flowControl = QSerialPort::NoFlowControl;
-    m_currentSettings.stringFlowControl = settings.value("stringFlowControl", QByteArray()).toString();
-    m_currentSettings.localEchoEnabled = settings.value("stringFlowControl", QByteArray()).toBool();
+    m_currentSettings.stringFlowControl = ini.value("stringFlowControl", QByteArray()).toString();
+    m_currentSettings.localEchoEnabled = ini.value("localEchoEnabled", false).toBool();
 
-    settings.endGroup();
+    ini.endGroup();
 }
 
 void SettingsDialog::saveSettingsFromIni()
 {
-    QSettings settings("set.ini", QSettings::IniFormat);
-    settings.beginGroup("comport");
-    settings.setValue("name", m_currentSettings.name);
-    settings.setValue("baudRate",m_currentSettings.baudRate);
-    settings.setValue("stringBaudRate",m_currentSettings.stringBaudRate);
-    settings.setValue("dataBits",m_currentSettings.dataBits);
-    settings.setValue("stringDataBits",m_currentSettings.stringDataBits);
-    settings.setValue("parity",m_currentSettings.parity);
-    settings.setValue("stringParity",m_currentSettings.stringParity);
-    settings.setValue("stopBits",m_currentSettings.stopBits);
-    settings.setValue("stringStopBits",m_currentSettings.stringStopBits);
-    settings.setValue("flowControl",m_currentSettings.flowControl);
-    settings.setValue("stringFlowControl",m_currentSettings.stringFlowControl);
-    settings.setValue("localEchoEnabled",m_currentSettings.localEchoEnabled);
-    settings.endGroup();
+    QSettings ini("set.ini", QSettings::IniFormat);
+    ini.beginGroup("comport");
+    ini.setValue("name", m_currentSettings.name);
+    ini.setValue("baudRate",m_currentSettings.baudRate);
+    ini.setValue("stringBaudRate",m_currentSettings.stringBaudRate);
+    ini.setValue("dataBits",m_currentSettings.dataBits);
+    ini.setValue("stringDataBits",m_currentSettings.stringDataBits);
+    ini.setValue("parity",m_currentSettings.parity);
+    ini.setValue("stringParity",m_currentSettings.stringParity);
+    ini.setValue("stopBits",m_currentSettings.stopBits);
+    ini.setValue("stringStopBits",m_currentSettings.stringStopBits);
+    ini.setValue("flowControl",m_currentSettings.flowControl);
+    ini.setValue("stringFlowControl",m_currentSettings.stringFlowControl);
+    ini.setValue("localEchoEnabled",m_currentSettings.localEchoEnabled);
+    ini.endGroup();
 }
 
 SettingsDialog::Settings SettingsDialog::settings() const

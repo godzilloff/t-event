@@ -420,10 +420,8 @@ void SportIdentStation::handleCardDetection(const QByteArray& data) {
         QByteArray cardNumberBytes;
 
         // Для C_SI9_DET данные начинаются со 2-го байта
-        if (data.size() >= 4) {
-            cardNumberBytes.append(1, '\0');
-            cardNumberBytes.append(data.mid(1, 3)); // Байты 1-3 содержат номер
-        }
+        cardNumberBytes.append(1, '\0');
+        cardNumberBytes.append(data.mid(1, 3)); // Байты 1-3 содержат номер
 
         uint32_t cardNumber = DataDecoder::decodeCardNumber(cardNumberBytes);
         CardType cardType = DataDecoder::detectCardType(cardNumber);

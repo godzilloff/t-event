@@ -60,8 +60,8 @@ bool ResultProcessor::processCardData(const SportIdent::CardData& cardData, QWid
     }
     
     // Проверяем, нет ли уже результата для этого участника
-    auto& db = DatabaseManager::instance();
-    auto existingResults = db.findRecords("results", "participant_id", participantId);
+    const auto& db = DatabaseManager::instance();
+    const auto existingResults = db.findRecords("results", "participant_id", participantId);
     
     if (!existingResults.isEmpty()) {
         // Нашли существующий результат
@@ -107,8 +107,8 @@ qint64 ResultProcessor::findParticipantByChipNumber(uint32_t chipNumber) const
     }
     
     // Ищем в базе данных
-    auto& db = DatabaseManager::instance();
-    auto participants = db.findRecords("participants", "chip_number", 
+    const auto& db = DatabaseManager::instance();
+    const auto participants = db.findRecords("participants", "chip_number",
                                        QString::number(chipNumber));
     
     if (!participants.isEmpty()) {
@@ -147,8 +147,8 @@ qint64 ResultProcessor::createOrGetParticipant(const SportIdent::CardData& cardD
         *outBib = bibNumber;
     
     // Ищем участника по bib номеру
-    auto& db = DatabaseManager::instance();
-    auto participants = db.findRecords("participants", "bib_number", bibNumber);
+    const auto& db = DatabaseManager::instance();
+    const auto participants = db.findRecords("participants", "bib_number", bibNumber);
     
     if (!participants.isEmpty()) {
         qint64 participantId = participants.first();
@@ -227,11 +227,9 @@ qint64 ResultProcessor::createResultRecord(const SportIdent::CardData& cardData,
         return -1;
     }
 
-    if (resultId != -1) {
-        // Сохраняем отметки КП
-        saveControlPointTimes(resultId, cardData.punches);
-        emit resultReadyForUpload(resultId);
-    }
+    // Сохраняем отметки КП
+    saveControlPointTimes(resultId, cardData.punches);
+    emit resultReadyForUpload(resultId);
     
     return resultId;
 }
@@ -265,7 +263,7 @@ void ResultProcessor::saveControlPointTimes(qint64 resultId,
 
 PrintResultData ResultProcessor::getPrintDataForParticipant(qint64 participantId) const
 {
-    PrintResultData data;
+    PrintResultData data{};
 
     if (!m_document) {
         return data;
@@ -305,17 +303,36 @@ PrintResultData ResultProcessor::getPrintDataForParticipant(qint64 participantId
         data.delegationName = record["delegation_name"].toString();
 
         // Времена
-        QString startTimeStr = record["start_time"].toString();
-        if (!startTimeStr.isEmpty()) {
-            data.startTime = QDateTime::fromString(startTimeStr, Qt::ISODate);
-        }
+        // QString startTimeStr = record["start_time"].toString();
+        // if (!startTimeStr.isEmpty()) {
+        //     data.startTime = QDateTime::fromString(startTimeStr, Qt::ISODate);
+        // }
 
-        QString finishTimeStr = record["finish_time"].toString();
-        if (!finishTimeStr.isEmpty()) {
-            data.finishTime = QDateTime::fromString(finishTimeStr, Qt::ISODate);
-        }
+        // QString finishTimeStr = record["finish_time"].toString();
+        // if (!finishTimeStr.isEmpty()) {
+        //     data.finishTime = QDateTime::fromString(finishTimeStr, Qt::ISODate);
+        // }
 
-        data.resultSeconds = record["result_time"].toInt();
+        // Парсинг времени с поддержкой обоих форматов
+        auto parseDateTime = [](const QString& s) -> QDateTime {
+            if (s.isEmpty()) return {};
+            QDateTime dt = QDateTime::fromString(s, Qt::ISODate);
+            if (!dt.isValid())
+                dt = QDateTime::fromString(s, "dd.MM.yyyy HH:mm:ss.zzz");
+            return dt;
+        };
+
+        data.startTime  = parseDateTime(record["start_time"].toString());
+        data.finishTime = parseDateTime(record["finish_time"].toString());
+
+        // result_time хранится как "hh:mm:ss.zzz" — парсим как QTime
+        const QString rtStr = record["result_time"].toString();
+        if (!rtStr.isEmpty()) {
+            QTime rt = QTime::fromString(rtStr, "hh:mm:ss.zzz");
+            if (!rt.isValid()) rt = QTime::fromString(rtStr, "hh:mm:ss");
+            if (rt.isValid())
+                data.resultSeconds = QTime(0, 0, 0).secsTo(rt);
+        }
     }
 
     // Информация о соревновании

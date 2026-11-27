@@ -687,11 +687,9 @@ void PersonEditDialog::onApplyClicked()
         if (isNewRecord()) {
             setDialogTitle(tr("Редактировать запись"));
 
-            // Меняем доступность кнопок
             QDialogButtonBox* buttonBox = findChild<QDialogButtonBox*>();
             if (buttonBox) {
-                QPushButton* deleteButton = buttonBox->findChild<QPushButton*>("deleteButton");
-                if (!deleteButton) {
+                if (!buttonBox->findChild<QPushButton*>("deleteButton")) {
                     addDeleteButton(buttonBox);
                 }
             }

@@ -305,25 +305,25 @@ QModelIndex ResultsProxyModel::mapFromSource(const QModelIndex& sourceIndex) con
 
 void ResultsProxyModel::sort(int column, Qt::SortOrder order)
 {
-    qDebug() << "\n=== SORT CALLED ===";
-    qDebug() << "  column:" << column;
-    qDebug() << "  order:" << (order == Qt::AscendingOrder ? "ASC" : "DESC");
-    qDebug() << "  sourceColumnCount:" << m_sourceColumnCount;
-    qDebug() << "  isVirtual:" << (column >= m_sourceColumnCount);
+    // qDebug() << "\n=== SORT CALLED ===";
+    // qDebug() << "  column:" << column;
+    // qDebug() << "  order:" << (order == Qt::AscendingOrder ? "ASC" : "DESC");
+    // qDebug() << "  sourceColumnCount:" << m_sourceColumnCount;
+    // qDebug() << "  isVirtual:" << (column >= m_sourceColumnCount);
 
     m_currentSortColumn = column;
     m_currentSortOrder = order;
 
     if (column >= m_sourceColumnCount) {
-        qDebug() << "  -> delegating to base sort(0) for virtual column";
+        // qDebug() << "  -> delegating to base sort(0) for virtual column";
         // QSortFilterProxyModel::sort(0, order);
         AbstractProxyModel::sort(0, order);
     } else {
-        qDebug() << "  -> delegating to base sort(" << column << ") for regular column";
+        // qDebug() << "  -> delegating to base sort(" << column << ") for regular column";
         // QSortFilterProxyModel::sort(column, order);
         AbstractProxyModel::sort(column, order);
     }
-    qDebug() << "=== SORT FINISHED ===\n";
+    // qDebug() << "=== SORT FINISHED ===\n";
     //this->invalidate();
 
 }
@@ -347,15 +347,15 @@ bool ResultsProxyModel::lessThan(const QModelIndex& source_left, const QModelInd
         QVariant leftData = sourceModel()->data(leftIdx, Qt::DisplayRole);
         QVariant rightData = sourceModel()->data(rightIdx, Qt::DisplayRole);
 
-        QString leftHeader = sourceModel()->headerData(m_currentSortColumn, Qt::Horizontal).toString();
+        // QString leftHeader = sourceModel()->headerData(m_currentSortColumn, Qt::Horizontal).toString();
 
-        qDebug() << "\n--- lessThan debug ---";
-        qDebug() << "  Сортировка по колонке:" << m_currentSortColumn << "(" << leftHeader << ")";
-        qDebug() << "  Левая строка:" << source_left.row()
-                 << "данные:" << leftData.toString();
-        qDebug() << "  Правая строка:" << source_right.row()
-                 << "данные:" << rightData.toString();
-        qDebug() << "  Порядок сортировки:" << (m_currentSortOrder == Qt::AscendingOrder ? "ASC" : "DESC");
+        // qDebug() << "\n--- lessThan debug ---";
+        // qDebug() << "  Сортировка по колонке:" << m_currentSortColumn << "(" << leftHeader << ")";
+        // qDebug() << "  Левая строка:" << source_left.row()
+                 // << "данные:" << leftData.toString();
+        // qDebug() << "  Правая строка:" << source_right.row()
+                 // << "данные:" << rightData.toString();
+        // qDebug() << "  Порядок сортировки:" << (m_currentSortOrder == Qt::AscendingOrder ? "ASC" : "DESC");
 
         // Проверяем, являются ли данные числами в строковом формате
         bool leftOk, rightOk;
@@ -365,7 +365,7 @@ bool ResultsProxyModel::lessThan(const QModelIndex& source_left, const QModelInd
         bool result;
         if (leftOk && rightOk) {
             // Для чисел используем прямое сравнение
-            qDebug() << "  Числовое сравнение:" << leftNum << "vs" << rightNum;
+            // qDebug() << "  Числовое сравнение:" << leftNum << "vs" << rightNum;
 
             // ВАЖНО: lessThan ВСЕГДА отвечает на вопрос "должен ли левый элемент быть перед правым?"
             // Алгоритм сортировки сам учтет порядок ASC/DESC
@@ -381,8 +381,8 @@ bool ResultsProxyModel::lessThan(const QModelIndex& source_left, const QModelInd
                                   (comparison == QPartialOrdering::Equivalent ? "Equal" : "Unordered")));
         }
 
-        qDebug() << "  lessThan результат:" << result;
-        qDebug() << "----------------------\n";
+        // qDebug() << "  lessThan результат:" << result;
+        // qDebug() << "----------------------\n";
 
         return result;
     }
@@ -410,11 +410,11 @@ bool ResultsProxyModel::lessThan(const QModelIndex& source_left, const QModelInd
     case 0: // Rank
         // ВАЖНО: используем ТУ ЖЕ ЛОГИКУ - отвечаем только на вопрос "меньше ли?"
         result = (leftData.rank < rightData.rank);
-        qDebug() << "  Виртуальная колонка Rank:" << leftData.rank << "<" << rightData.rank << "=" << result;
+        // qDebug() << "  Виртуальная колонка Rank:" << leftData.rank << "<" << rightData.rank << "=" << result;
         break;
     case 1: // TimeLoss
         result = (leftData.timeLoss < rightData.timeLoss);
-        qDebug() << "  Виртуальная колонка TimeLoss:" << leftData.timeLoss << "<" << rightData.timeLoss << "=" << result;
+        // qDebug() << "  Виртуальная колонка TimeLoss:" << leftData.timeLoss << "<" << rightData.timeLoss << "=" << result;
         break;
     case 2: // Percent
         if (leftData.resultSeconds > 0 && rightData.resultSeconds > 0) {
@@ -425,7 +425,7 @@ bool ResultsProxyModel::lessThan(const QModelIndex& source_left, const QModelInd
             double rightPct = rightLeader > 0 ? (double)rightData.resultSeconds / rightLeader : 1.0;
 
             result = (leftPct < rightPct);
-            qDebug() << "  Виртуальная колонка Percent:" << leftPct << "<" << rightPct << "=" << result;
+            // qDebug() << "  Виртуальная колонка Percent:" << leftPct << "<" << rightPct << "=" << result;
         } else {
             result = false;
         }
@@ -434,8 +434,8 @@ bool ResultsProxyModel::lessThan(const QModelIndex& source_left, const QModelInd
         result = false;
     }
 
-    qDebug() << "  lessThan результат для виртуальной колонки:" << result;
-    qDebug() << "----------------------\n";
+    // qDebug() << "  lessThan результат для виртуальной колонки:" << result;
+    // qDebug() << "----------------------\n";
 
     // ВОЗВРАЩАЕМ ТОЛЬКО result, без инверсии!
     // Алгоритм сортировки сам учтет m_currentSortOrder
@@ -480,26 +480,26 @@ void ResultsProxyModel::rebuildCache()
     QMap<GroupKey, QList<ResultData>> groups;
     QHash<qint64, ResultData> newCache;
 
-    int rowCount = sourceModel()->rowCount();
-    qDebug() << "Processing" << rowCount << "rows";
+    int rowCnt = sourceModel()->rowCount();
+    qDebug() << "Processing" << rowCnt << "rows";
 
-    for (int row = 0; row < rowCount; ++row) {
-        ResultData data;
-        data.resultId = getResultIdForRow(row);
-        data.participantId = getParticipantIdForRow(row);
-        data.resultSeconds = getResultSecondsForRow(row);
-        data.ageGroup = getAgeGroupForRow(row);
-        data.gender = getGenderForRow(row);
-        data.rank = 0;
-        data.timeLoss = 0;
+    for (int row = 0; row < rowCnt; ++row) {
+        ResultData resultData;
+        resultData.resultId = getResultIdForRow(row);
+        resultData.participantId = getParticipantIdForRow(row);
+        resultData.resultSeconds = getResultSecondsForRow(row);
+        resultData.ageGroup = getAgeGroupForRow(row);
+        resultData.gender = getGenderForRow(row);
+        resultData.rank = 0;
+        resultData.timeLoss = 0;
 
-        newCache[data.resultId] = data;
+        newCache[resultData.resultId] = resultData;
 
-        if (data.resultSeconds > 0 && !data.ageGroup.isEmpty()) {
+        if (resultData.resultSeconds > 0 && !resultData.ageGroup.isEmpty()) {
             GroupKey key;
-            key.ageGroup = data.ageGroup;
-            key.gender = data.gender;
-            groups[key].append(data);
+            key.ageGroup = resultData.ageGroup;
+            key.gender = resultData.gender;
+            groups[key].append(resultData);
         }
     }
 
@@ -521,20 +521,20 @@ void ResultsProxyModel::rebuildCache()
         int prevTime = -1;
 
         for (int i = 0; i < groupList.size(); ++i) {
-            ResultData& data = groupList[i];
+            ResultData& entry = groupList[i];
 
-            if (data.resultSeconds != prevTime) {
+            if (entry.resultSeconds != prevTime) {
                 currentRank = i + 1;
-                prevTime = data.resultSeconds;
+                prevTime = entry.resultSeconds;
             }
 
-            data.rank = currentRank;
-            data.timeLoss = data.resultSeconds - leaderTime;
+            entry.rank = currentRank;
+            entry.timeLoss = entry.resultSeconds - leaderTime;
 
             // Обновляем в основном кеше
-            if (newCache.contains(data.resultId)) {
-                newCache[data.resultId].rank = data.rank;
-                newCache[data.resultId].timeLoss = data.timeLoss;
+            if (newCache.contains(entry.resultId)) {
+                newCache[entry.resultId].rank = entry.rank;
+                newCache[entry.resultId].timeLoss = entry.timeLoss;
             }
         }
 
@@ -628,10 +628,7 @@ QString ResultsProxyModel::formatTimeLoss(int seconds) const
 {
     if (seconds < 0) return "—";
 
-    if (seconds < 60) {
-        return QString("%1 сек").arg(seconds);
-    }
-    else if (seconds < 3600) {
+    if (seconds < 3600) {
         int minutes = seconds / 60;
         int secs = seconds % 60;
         return QString("%1:%2").arg(minutes, 2, 10, QChar('0'))
@@ -805,10 +802,10 @@ QString ResultsProxyModel::formatTimeWithPrecision(const QTime& time) const
         return QString();
     }
 
-    QString format;
+    // QString format;
     switch (m_timePrecision) {
     case TimePrecision::Seconds:
-        format = "hh:mm:ss";
+        // format = "hh:mm:ss";
         break;
     case TimePrecision::Tenths:
         // Десятые доли секунды

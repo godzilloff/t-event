@@ -64,8 +64,8 @@ bool CsvImporter::validateRecord(const CsvRecord& record)
     
     // Проверяем формат номера участника
     bool ok;
-    record.bibNumber.toInt(&ok);
-    if (!ok) {
+    const int bibNumber = record.bibNumber.toInt(&ok);
+    if (!ok || bibNumber <= 0) {
         m_lastError = tr("Некорректный номер участника: %1").arg(record.bibNumber);
         return false;
     }
@@ -81,8 +81,8 @@ bool CsvImporter::validateRecord(const CsvRecord& record)
     
     // Проверяем номер чипа
     if (!record.chipNumber.isEmpty()) {
-        record.chipNumber.toInt(&ok);
-        if (!ok && record.chipNumber != "0") {
+        const int chipNumber = record.chipNumber.toInt(&ok);
+        if ((!ok && record.chipNumber != "0")||(chipNumber < 0)) {
             m_lastError = tr("Некорректный номер чипа: %1").arg(record.chipNumber);
             return false;
         }

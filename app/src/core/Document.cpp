@@ -434,7 +434,7 @@ bool Document::addResult(const SportIdent::CardData& cardData, qint64 participan
 
 qint64 Document::findParticipantByChipNumber(uint32_t chipNumber) const
 {
-    auto& db = DatabaseManager::instance();
+    const auto& db = DatabaseManager::instance();
     QString chipStr = QString::number(chipNumber);
 
     auto participants = db.findRecords("participants", "chip_number", chipStr);
@@ -448,7 +448,7 @@ bool Document::hasResultForParticipant(qint64 participantId) const
 
 qint64 Document::findResultIdForParticipant(qint64 participantId) const
 {
-    auto& db = DatabaseManager::instance();
+    const auto& db = DatabaseManager::instance();
     auto results = db.findRecords("results", "participant_id", participantId);
     return results.isEmpty() ? -1 : results.first();
 }

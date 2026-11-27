@@ -21,7 +21,7 @@ struct PrintResultData {
     // Времена
     QDateTime startTime;
     QDateTime finishTime;
-    int resultSeconds;
+    int resultSeconds = 0;
     
     // QR-код
     QString onlineResultsUrl;

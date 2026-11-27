@@ -14,12 +14,12 @@ int main(int argc, char *argv[])
     MainWindow w;
 
     QTranslator qtSerialTranslator;
-    if (qtSerialTranslator.load("qtserialport_" + QLocale::system().name(),QDir::currentPath() + "/translations" ))
+    if (qtSerialTranslator.load("qtserialport_" + QLocale::system().name(),QCoreApplication::applicationDirPath() + "/translations" ))
     {   qApp->installTranslator(&qtSerialTranslator); }
     else {    qDebug() << "not load qtSerialTranslator";    }
 
     QTranslator qtBaseTranslator;
-    if (qtBaseTranslator.load("qtbase_" + QLocale::system().name(),QDir::currentPath() + "/translations" ))
+    if (qtBaseTranslator.load("qtbase_" + QLocale::system().name(),QCoreApplication::applicationDirPath() + "/translations" ))
     {   qApp->installTranslator(&qtBaseTranslator); }
     else {    qDebug() << "not load qtBaseTranslator";    }
 

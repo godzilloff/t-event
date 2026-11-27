@@ -11,6 +11,13 @@
 #include <QUuid>
 #include <QStandardPaths>
 
+void execQuery(QSqlQuery& query, const QString& sql) {
+    if (!query.exec(sql)) {
+        qWarning() << "EXEC failed:" << sql
+                   << "error:" << query.lastError().text();
+    }
+};
+
 DatabaseManager& DatabaseManager::instance()
 {
     static DatabaseManager instance;
@@ -71,11 +78,11 @@ bool DatabaseManager::openDatabase(const QString& databasePath)
 
     // Настройки SQLite для производительности
     QSqlQuery query(m_db);
-    query.exec("PRAGMA foreign_keys = ON");
-    query.exec("PRAGMA journal_mode = DELETE");
-    query.exec("PRAGMA synchronous = FULL");
-    query.exec("PRAGMA cache_size = -20000"); // 20MB кэша
-    query.exec("PRAGMA mmap_size = 268435456"); // 256MB mmap
+    execQuery(query, "PRAGMA foreign_keys = ON");
+    execQuery(query, "PRAGMA journal_mode = DELETE");
+    execQuery(query, "PRAGMA synchronous = FULL");
+    execQuery(query, "PRAGMA cache_size = -20000");   //  20MB кэша
+    execQuery(query, "PRAGMA mmap_size = 268435456"); // 256MB mmap
 
     // ВСЕГДА догоняем схему — IF NOT EXISTS делает это безопасным
     createTables();
@@ -96,12 +103,11 @@ void DatabaseManager::closeDatabase()
 
     {
         QSqlQuery query(m_db);
-        query.exec("PRAGMA optimize");
+        execQuery(query, "PRAGMA optimize");
     } // query уничтожен здесь
 
     m_db.close();
     m_db = QSqlDatabase();
-    //QSqlDatabase::removeDatabase(m_connectionName);
     emit databaseClosed();
 }
 
@@ -110,7 +116,7 @@ void DatabaseManager::createTables()
     QSqlQuery query(m_db);
 
     // Таблица соревнований
-    query.exec(R"(
+    execQuery(query , R"(
         CREATE TABLE IF NOT EXISTS competitions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
@@ -125,7 +131,7 @@ void DatabaseManager::createTables()
     )");
 
     // Настройки Orgeo для каждого соревнования
-    query.exec(R"(
+    execQuery(query , R"(
         CREATE TABLE IF NOT EXISTS orgeo_configs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             competition_id INTEGER NOT NULL,
@@ -143,7 +149,7 @@ void DatabaseManager::createTables()
     )");
 
     // Таблица делегаций
-    query.exec(R"(
+    execQuery(query , R"(
         CREATE TABLE IF NOT EXISTS delegations (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             competition_id INTEGER NOT NULL,
@@ -158,7 +164,7 @@ void DatabaseManager::createTables()
     )");
 
     // Таблица возрастных групп
-    query.exec(R"(
+    execQuery(query , R"(
         CREATE TABLE IF NOT EXISTS age_groups (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             competition_id INTEGER NOT NULL,
@@ -173,7 +179,7 @@ void DatabaseManager::createTables()
     )");
 
     // Таблица дистанций
-    query.exec(R"(
+    execQuery(query , R"(
         CREATE TABLE IF NOT EXISTS distances (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             competition_id INTEGER NOT NULL,
@@ -188,7 +194,7 @@ void DatabaseManager::createTables()
     )");
 
     // Участники
-    query.exec(R"(
+    execQuery(query , R"(
         CREATE TABLE IF NOT EXISTS participants (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             competition_id INTEGER NOT NULL,
@@ -225,7 +231,7 @@ void DatabaseManager::createTables()
     )");
 
     // Члены команды
-    query.exec(R"(
+    execQuery(query , R"(
         CREATE TABLE IF NOT EXISTS team_members (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             participant_id INTEGER NOT NULL,
@@ -241,7 +247,7 @@ void DatabaseManager::createTables()
     )");
 
     // Результаты
-    query.exec(R"(
+    execQuery(query , R"(
         CREATE TABLE IF NOT EXISTS results (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             participant_id INTEGER NOT NULL,
@@ -257,7 +263,7 @@ void DatabaseManager::createTables()
     )");
 
     // Времена прохождения контрольных пунктов
-    query.exec(R"(
+    execQuery(query , R"(
         CREATE TABLE IF NOT EXISTS control_point_times (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             result_id INTEGER NOT NULL,
@@ -274,7 +280,7 @@ void DatabaseManager::createViews()
 {
     QSqlQuery query(m_db);
 
-    query.exec(R"(
+    execQuery(query , R"(
         CREATE VIEW IF NOT EXISTS v_participants_details AS
         SELECT
             p.id,
@@ -303,7 +309,7 @@ void DatabaseManager::createViews()
     )");
 
     // Добавляем VIEW для результатов с информацией об участниках
-    query.exec(R"(
+    execQuery(query , R"(
         CREATE VIEW IF NOT EXISTS v_results_details AS
         SELECT
             r.id,
@@ -331,17 +337,17 @@ void DatabaseManager::createIndexes()
 {
     QSqlQuery query(m_db);
 
-    query.exec("CREATE INDEX IF NOT EXISTS idx_participants_competition ON participants(competition_id)");
-    query.exec("CREATE INDEX IF NOT EXISTS idx_orgeo_configs_competition ON orgeo_configs(competition_id)");
-    query.exec("CREATE INDEX IF NOT EXISTS idx_participants_delegation ON participants(delegation_id)");
-    query.exec("CREATE INDEX IF NOT EXISTS idx_participants_distance ON participants(distance_id)");
-    query.exec("CREATE INDEX IF NOT EXISTS idx_participants_bib ON participants(bib_number)");
-    query.exec("CREATE INDEX IF NOT EXISTS idx_participants_chip ON participants(chip_number)");
-    query.exec("CREATE INDEX IF NOT EXISTS idx_results_participant ON results(participant_id)");
-    query.exec("CREATE INDEX IF NOT EXISTS idx_control_times_result ON control_point_times(result_id)");
-    query.exec("CREATE INDEX IF NOT EXISTS idx_delegations_competition ON delegations(competition_id)");
-    query.exec("CREATE INDEX IF NOT EXISTS idx_distances_competition ON distances(competition_id)");
-    query.exec("CREATE INDEX IF NOT EXISTS idx_age_groups_competition ON age_groups(competition_id)");
+    execQuery(query , "CREATE INDEX IF NOT EXISTS idx_participants_competition ON participants(competition_id)");
+    execQuery(query , "CREATE INDEX IF NOT EXISTS idx_orgeo_configs_competition ON orgeo_configs(competition_id)");
+    execQuery(query , "CREATE INDEX IF NOT EXISTS idx_participants_delegation ON participants(delegation_id)");
+    execQuery(query , "CREATE INDEX IF NOT EXISTS idx_participants_distance ON participants(distance_id)");
+    execQuery(query , "CREATE INDEX IF NOT EXISTS idx_participants_bib ON participants(bib_number)");
+    execQuery(query , "CREATE INDEX IF NOT EXISTS idx_participants_chip ON participants(chip_number)");
+    execQuery(query , "CREATE INDEX IF NOT EXISTS idx_results_participant ON results(participant_id)");
+    execQuery(query , "CREATE INDEX IF NOT EXISTS idx_control_times_result ON control_point_times(result_id)");
+    execQuery(query , "CREATE INDEX IF NOT EXISTS idx_delegations_competition ON delegations(competition_id)");
+    execQuery(query , "CREATE INDEX IF NOT EXISTS idx_distances_competition ON distances(competition_id)");
+    execQuery(query , "CREATE INDEX IF NOT EXISTS idx_age_groups_competition ON age_groups(competition_id)");
 }
 
 bool DatabaseManager::createRecord(const QString& tableName, const QHash<QString, QVariant>& data, qint64* id)
@@ -350,14 +356,14 @@ bool DatabaseManager::createRecord(const QString& tableName, const QHash<QString
         return false;
     }
 
-    QStringList fieldNames = data.keys();
+    QStringList lfieldNames = data.keys();
     QStringList placeholders;
-    for (int i = 0; i < fieldNames.size(); ++i) {
+    for (int i = 0; i < lfieldNames.size(); ++i) {
         placeholders.append("?");
     }
 
     QString sql = QString("INSERT INTO %1 (%2) VALUES (%3)")
-                      .arg(tableName,fieldNames.join(", "),placeholders.join(", "));
+                      .arg(tableName,lfieldNames.join(", "),placeholders.join(", "));
 
     QSqlQuery query(m_db);
     if (!query.prepare(sql)) {
@@ -367,7 +373,7 @@ bool DatabaseManager::createRecord(const QString& tableName, const QHash<QString
         return false;
     }
 
-    for (const QString& field : fieldNames)
+    for (const QString& field : lfieldNames)
         query.addBindValue(data[field]);
 
     if (!query.exec()) {
@@ -391,9 +397,9 @@ bool DatabaseManager::updateRecord(const QString& tableName, qint64 id, const QH
     }
 
     QStringList updates;
-    QStringList fieldNames = data.keys();
+    QStringList lfieldNames = data.keys();
 
-    for (const QString& field : fieldNames) {
+    for (const QString& field : lfieldNames) {
         updates.append(field + " = ?");
     }
 
@@ -408,7 +414,7 @@ bool DatabaseManager::updateRecord(const QString& tableName, qint64 id, const QH
         return false;
     }
 
-    for (const QString& field : fieldNames) {
+    for (const QString& field : lfieldNames) {
         query.addBindValue(data[field]);
     }
 
@@ -646,7 +652,7 @@ void DatabaseManager::vacuumDatabase()
     }
 
     QSqlQuery query(m_db);
-    query.exec("VACUUM");
+    execQuery(query , "VACUUM");
 }
 
 bool DatabaseManager::backupDatabase(const QString& backupPath)
@@ -656,16 +662,25 @@ bool DatabaseManager::backupDatabase(const QString& backupPath)
     }
 
     // Закрываем текущее соединение
-    QString originalPath = m_db.databaseName();
+    const QString originalPath = m_db.databaseName();
     m_db.close();
 
     // Копируем файл
-    bool success = QFile::copy(originalPath, backupPath);
+    const bool copyOk = QFile::copy(originalPath, backupPath);
+    if (!copyOk) {
+        qWarning() << "Backup copy failed:" << originalPath << "->" << backupPath;
+    }
 
     // Открываем заново
-    m_db.open();
+    const bool reopenOk = m_db.open();
+    if (!reopenOk) {
+        const QString err = m_db.lastError().text();
+        qCritical() << "Failed to reopen database after backup:" << err;
+        emit databaseError(err);
+    }
 
-    return success;
+    // Успех только если и копирование, и переоткрытие прошли
+    return copyOk && reopenOk;
 }
 
 bool DatabaseManager::executeQuery(const QString& sql, const QHash<QString, QVariant>& params)
@@ -754,7 +769,7 @@ int DatabaseManager::userVersion()
 void DatabaseManager::setUserVersion(int v)
 {
     QSqlQuery q(m_db);
-    q.exec(QString("PRAGMA user_version = %1").arg(v));
+    execQuery(q , QString("PRAGMA user_version = %1").arg(v));
 }
 
 void DatabaseManager::applyColumnMigrations()
@@ -763,7 +778,7 @@ void DatabaseManager::applyColumnMigrations()
     if (v >= SCHEMA_VERSION) return;
 
     QSqlQuery q(m_db);
-    q.exec("BEGIN");
+    execQuery(q , "BEGIN");
 
     // v < 1 — «нулевая» БД: ничего ALTER-ить не надо,
     // всё уже создано через createTables()/createViews()/createIndexes().
@@ -777,5 +792,5 @@ void DatabaseManager::applyColumnMigrations()
     // if (v < 3) { q.exec("ALTER TABLE participants ADD COLUMN something TEXT"); }
 
     setUserVersion(SCHEMA_VERSION);
-    q.exec("COMMIT");
+    execQuery(q , "COMMIT");
 }

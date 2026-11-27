@@ -342,7 +342,7 @@ void OrgeoService::processQueue()
         return;
     }
     m_uploading = true;
-    QueuedRequest& req = m_queue.head();
+    const QueuedRequest& req = m_queue.head();
     const QString tn = requestTypeName(req.type);
     emit uploadStarted(tn);
     emit logMessage(QString("Отправка «%1» (попытка %2)")
